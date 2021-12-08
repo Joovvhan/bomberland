@@ -3,3 +3,4 @@ node_modules
 typescript/dist
 
 logs/
+python3/trajectory/
