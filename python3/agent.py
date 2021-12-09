@@ -129,7 +129,6 @@ class Agent():
                 unit_state_json = json.dumps(unit_state, indent=4) 
                 f.write(unit_state_json)
 
-            self.step += 1
             # for unit in unit_state:
             #     print(unit, unit_state[unit])
         
@@ -137,6 +136,8 @@ class Agent():
             with open(f'trajectory/{self.step:03d}_action_b.json', 'w') as f:
                 decisions_json = json.dumps(decisions, indent=4) 
                 f.write(decisions_json)
+
+        self.step += 1
 
 
 def main():
