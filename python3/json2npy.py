@@ -3,6 +3,8 @@ from glob import glob
 import json
 from tqdm.auto import tqdm
 
+# np.set_printoptions(precision=2)
+
 TYPE2CODE = {
     'e': 0,
     'a': 1,
@@ -150,11 +152,31 @@ def rotate_observation(observation):
 
 if __name__ == "__main__":
 
+    GAMMA = 0.90
+
     json_files = sorted(glob('./trajectory/*.json'))
     match_len = len(json_files) // 4
     status_list = [json_files[4*i:4*i+4] for i in range(match_len)]
 
-    for i, (status_file, next_status) in tqdm(enumerate(zip(status_list[:-1], status_list[1:]))):
+    # for i, (status_file, next_status) in tqdm(enumerate(zip(status_list[:-1], status_list[1:]))):
+
+    last_rewards = dict({
+        'c': 0.0,
+        'd': 0.0,
+        'e': 0.0,
+        'f': 0.0,
+        'g': 0.0,
+        'h': 0.0,
+    })
+
+    for i in tqdm(reversed(range(len(status_list) - 1))):
+
+        # print('Before:', last_rewards)
+
+        status_file, next_status = status_list[i], status_list[i+1]
+
+        # print(i, status_file, next_status)
+
         action_a_json = status_file[0]
         action_b_json = status_file[1]
         entities_json = status_file[2]
@@ -205,32 +227,43 @@ if __name__ == "__main__":
             u_board[TYPE2CODE['p'], coord[0], coord[1]] = 1
             observation = np.concatenate((observation, np.expand_dims(u_board, axis=0)), axis=0)
 
-        r_vector = np.zeros_like(q_vector)
+        r_vector = np.zeros_like(q_vector, dtype=float)
 
-        if next_status is not None:
-            next_status_json = next_status[3]
-            with open(next_status_json, 'r') as f:
-                next_status = json.load(f)
+        # if next_status is not None:
+        next_status_json = next_status[3]
+        with open(next_status_json, 'r') as f:
+            next_status = json.load(f)
 
-            team_life_reward = {'a': 0, 'b': 0}
+        team_life_reward = {'a': 0, 'b': 0}
 
-            for uid in live_units:
-                life_r = next_status[uid]['hp'] - live_units[uid]['hp'] 
-                power_r = next_status[uid]['blast_diameter'] - live_units[uid]['blast_diameter'] 
-                team_life_reward[live_units[uid]["agent_id"]] += life_r
-                r_vector[id_list[uid]] += (life_r + power_r)
+        for uid in live_units:
+            life_r = next_status[uid]['hp'] - live_units[uid]['hp'] 
+            power_r = next_status[uid]['blast_diameter'] - live_units[uid]['blast_diameter'] 
+            team_life_reward[live_units[uid]["agent_id"]] += life_r
+            r_vector[id_list[uid]] += (life_r + power_r)
 
-            for uid in live_units:
-                r_vector[id_list[uid]] -= team_life_reward[A2B[live_units[uid]["agent_id"]]]
+        for uid in live_units:
+            r_vector[id_list[uid]] -= team_life_reward[A2B[live_units[uid]["agent_id"]]]
 
-        else:
-            pass
+        for uid in last_rewards:
+            last_rewards[uid] *= GAMMA
+
+        for uid in live_units:
+            # print(last_rewards, r_vector)
+            r_vector[id_list[uid]] += last_rewards[uid]
+            last_rewards[uid] = r_vector[id_list[uid]]
+
+        # else:
+        #     pass
 
         np.savez(f'./obs/{i:03d}_obs.npz',
                  observation=observation, 
                  q_vector=q_vector, 
                  r_vector=r_vector)
-                 
+
+        # print('After:', last_rewards, r_vector)
+        # print(('{:+0.2f} ' * len(r_vector)).format(*r_vector))
+
         # if any(r_vector):
         #     visualize_board(board)
         #     for i, (uid, q, coord, team, r) in enumerate(zip(id_list, q_list, coord_list, team_list, r_vector)):

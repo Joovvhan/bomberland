@@ -26,9 +26,9 @@ def train():
 
     ####### initialize environment hyperparameters ######
 
-    env_name = "RoboschoolWalker2d-v1"
+    # env_name = "RoboschoolWalker2d-v1"
 
-    has_continuous_action_space = True  # continuous action space; else discrete
+    # has_continuous_action_space = True  # continuous action space; else discrete
 
     max_ep_len = 1000                   # max timesteps in one episode
     max_training_timesteps = int(3e6)   # break training loop if timeteps > max_training_timesteps
@@ -65,18 +65,18 @@ def train():
 
 
 
-    print("training environment name : " + env_name)
+    # print("training environment name : " + env_name)
 
-    env = gym.make(env_name)
+    # env = gym.make(env_name)
 
     # state space dimension
-    state_dim = env.observation_space.shape[0]
+    # state_dim = env.observation_space.shape[0]
 
     # action space dimension
-    if has_continuous_action_space:
-        action_dim = env.action_space.shape[0]
-    else:
-        action_dim = env.action_space.n
+    # if has_continuous_action_space:
+    #     action_dim = env.action_space.shape[0]
+    # else:
+    #     action_dim = env.action_space.n
 
 
 
@@ -88,6 +88,7 @@ def train():
     if not os.path.exists(log_dir):
           os.makedirs(log_dir)
 
+    env_name = 'Bomberland'
     log_dir = log_dir + '/' + env_name + '/'
     if not os.path.exists(log_dir):
           os.makedirs(log_dir)
@@ -140,21 +141,21 @@ def train():
 
     print("--------------------------------------------------------------------------------------------")
 
-    print("state space dimension : ", state_dim)
-    print("action space dimension : ", action_dim)
+    # print("state space dimension : ", state_dim)
+    # print("action space dimension : ", action_dim)
 
     print("--------------------------------------------------------------------------------------------")
 
-    if has_continuous_action_space:
-        print("Initializing a continuous action space policy")
-        print("--------------------------------------------------------------------------------------------")
-        print("starting std of action distribution : ", action_std)
-        print("decay rate of std of action distribution : ", action_std_decay_rate)
-        print("minimum std of action distribution : ", min_action_std)
-        print("decay frequency of std of action distribution : " + str(action_std_decay_freq) + " timesteps")
+    # if has_continuous_action_space:
+    #     print("Initializing a continuous action space policy")
+    #     print("--------------------------------------------------------------------------------------------")
+    #     print("starting std of action distribution : ", action_std)
+    #     print("decay rate of std of action distribution : ", action_std_decay_rate)
+    #     print("minimum std of action distribution : ", min_action_std)
+    #     print("decay frequency of std of action distribution : " + str(action_std_decay_freq) + " timesteps")
 
-    else:
-        print("Initializing a discrete action space policy")
+    # else:
+    #     print("Initializing a discrete action space policy")
 
     print("--------------------------------------------------------------------------------------------")
 
@@ -168,12 +169,12 @@ def train():
     print("optimizer learning rate actor : ", lr_actor)
     print("optimizer learning rate critic : ", lr_critic)
 
-    if random_seed:
-        print("--------------------------------------------------------------------------------------------")
-        print("setting random seed to ", random_seed)
-        torch.manual_seed(random_seed)
-        env.seed(random_seed)
-        np.random.seed(random_seed)
+    # if random_seed:
+    #     print("--------------------------------------------------------------------------------------------")
+    #     print("setting random seed to ", random_seed)
+    #     torch.manual_seed(random_seed)
+    #     env.seed(random_seed)
+    #     np.random.seed(random_seed)
 
     #####################################################
 
@@ -182,7 +183,15 @@ def train():
     ################# training procedure ################
 
     # initialize a PPO agent
-    ppo_agent = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std)
+    # ppo_agent = PPO(state_dim, action_dim, 
+    #                 lr_actor, lr_critic, gamma, K_epochs, eps_clip, 
+    #                 has_continuous_action_space=False, action_std=None)
+
+    feature_dim=16
+
+    ppo_agent = PPO(feature_dim,
+                    lr_actor, lr_critic, gamma, K_epochs, eps_clip, 
+                    has_continuous_action_space=False, action_std=None)
 
 
     # track total training time
@@ -211,29 +220,31 @@ def train():
     # training loop
     while time_step <= max_training_timesteps:
 
-        state = env.reset()
-        current_ep_reward = 0
+        # state = env.reset()
+        # current_ep_reward = 0
 
         for t in range(1, max_ep_len+1):
 
+            ppo_agent.update()
+
             # select action with policy
-            action = ppo_agent.select_action(state)
-            state, reward, done, _ = env.step(action)
+            # action = ppo_agent.select_action(state)
+            # state, reward, done, _ = env.step(action)
 
             # saving reward and is_terminals
-            ppo_agent.buffer.rewards.append(reward)
-            ppo_agent.buffer.is_terminals.append(done)
+            # ppo_agent.buffer.rewards.append(reward)
+            # ppo_agent.buffer.is_terminals.append(done)
 
-            time_step +=1
-            current_ep_reward += reward
+            # time_step +=1
+            # current_ep_reward += reward
 
             # update PPO agent
-            if time_step % update_timestep == 0:
-                ppo_agent.update()
+            # if time_step % update_timestep == 0:
+            #     ppo_agent.update()
 
             # if continuous action space; then decay action std of ouput action distribution
-            if has_continuous_action_space and time_step % action_std_decay_freq == 0:
-                ppo_agent.decay_action_std(action_std_decay_rate, min_action_std)
+            # if has_continuous_action_space and time_step % action_std_decay_freq == 0:
+            #     ppo_agent.decay_action_std(action_std_decay_rate, min_action_std)
 
             # log in logging file
             if time_step % log_freq == 0:
@@ -270,20 +281,26 @@ def train():
                 print("--------------------------------------------------------------------------------------------")
 
             # break; if the episode is over
-            if done:
-                break
+            # if done:
+            #     break
 
-        print_running_reward += current_ep_reward
+        # print_running_reward += current_ep_reward
+        # print_running_episodes += 1
+
+        # log_running_reward += current_ep_reward
+        # log_running_episodes += 1
+
+        print_running_reward += 0
         print_running_episodes += 1
 
-        log_running_reward += current_ep_reward
+        log_running_reward += 0
         log_running_episodes += 1
 
         i_episode += 1
 
 
     log_f.close()
-    env.close()
+    # env.close()
 
 
 
