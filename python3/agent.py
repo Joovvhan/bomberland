@@ -94,8 +94,15 @@ class Agent():
         # send each unit a random action
         for unit_id in my_units:
 
-            action = random.choice(actions)
-            decisions[unit_id].update({'action': action})
+            prob = np.random.random(len(actions))
+            prob = prob / np.sum(prob)
+
+            action = np.random.choice(range(len(actions)), p=prob)
+            
+            decisions[unit_id].update({'action': actions[action]})
+            decisions[unit_id].update({'logprob': np.log(prob[action])})
+
+            action = actions[action]
 
             if action in ["up", "left", "right", "down"]:
                 await self._client.send_move(action, unit_id)

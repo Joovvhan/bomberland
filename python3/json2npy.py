@@ -154,7 +154,7 @@ if __name__ == "__main__":
     match_len = len(json_files) // 4
     status_list = [json_files[4*i:4*i+4] for i in range(match_len)]
 
-    for status_file, next_status in tqdm(zip(status_list[:-1], status_list[1:])):
+    for i, (status_file, next_status) in tqdm(enumerate(zip(status_list[:-1], status_list[1:]))):
         action_a_json = status_file[0]
         action_b_json = status_file[1]
         entities_json = status_file[2]
@@ -225,7 +225,12 @@ if __name__ == "__main__":
 
         else:
             pass
-        
+
+        np.savez(f'./obs/{i:03d}_obs.npz',
+                 observation=observation, 
+                 q_vector=q_vector, 
+                 r_vector=r_vector)
+                 
         # if any(r_vector):
         #     visualize_board(board)
         #     for i, (uid, q, coord, team, r) in enumerate(zip(id_list, q_list, coord_list, team_list, r_vector)):

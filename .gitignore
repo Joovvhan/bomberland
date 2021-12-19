@@ -4,3 +4,6 @@ typescript/dist
 
 logs/
 python3/trajectory/
+python3/obs/
+python3/.ipynb_checkpoints/
+python3/*.ipynb
