@@ -196,6 +196,7 @@ if __name__ == "__main__":
 
         # id_list, q_list, coord_list, team_list = list(), list(), list(), list()
         id_list, q_list, coord_list, team_list = dict(), list(), list(), list()
+        logp_list = list()
             
         with open(action_a_json, 'r') as f:
             actions = json.load(f)
@@ -204,6 +205,7 @@ if __name__ == "__main__":
                     # id_list.append(uid)
                     id_list[uid] = len(id_list)
                     q_list.append(ACTION2CODE[actions[uid]['action']])
+                    logp_list.append(actions[uid]['log_prob'])
                     coord_list.append(np.array(status[uid]["coordinates"]))
                     team_list.append(TEAM2CODE[status[uid]["agent_id"]])
 
@@ -214,10 +216,12 @@ if __name__ == "__main__":
                     # id_list.append(uid)
                     id_list[uid] = len(id_list)
                     q_list.append(ACTION2CODE[actions[uid]['action']])
+                    logp_list.append(actions[uid]['log_prob'])
                     coord_list.append(np.array(status[uid]["coordinates"]))
                     team_list.append(TEAM2CODE[status[uid]["agent_id"]])
 
         q_vector = np.array(q_list)
+        logp_vector = np.array(logp_list)
 
         observation = np.zeros((0, *board.shape))
 
@@ -259,7 +263,8 @@ if __name__ == "__main__":
         np.savez(f'./obs/{i:03d}_obs.npz',
                  observation=observation, 
                  q_vector=q_vector, 
-                 r_vector=r_vector)
+                 r_vector=r_vector,
+                 logp_vector=logp_vector)
 
         # print('After:', last_rewards, r_vector)
         # print(('{:+0.2f} ' * len(r_vector)).format(*r_vector))

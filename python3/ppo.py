@@ -5,6 +5,16 @@ import torch.nn as nn
 from torch.distributions import MultivariateNormal
 from torch.distributions import Categorical
 
+from glob import glob
+import os
+import numpy as np
+
+from tqdm.auto import tqdm
+
+from tensorboardX import SummaryWriter
+
+writer = SummaryWriter('runs/exp-1')
+
 ACTION_SPACE_SIZE = 6
 OBS_DIM = 11
 MAP_SIZE = 15
@@ -48,6 +58,24 @@ class RolloutBuffer:
         del self.logprobs[:]
         del self.rewards[:]
         del self.is_terminals[:]
+
+
+    def fill(self, observation_path='./obs'):
+
+        def unstack(array):
+            return [torch.tensor(array[i], dtype=torch.float) for i in range(array.shape[0])]
+
+        npz_files = sorted(glob(os.path.join(observation_path, '*.npz')))
+
+        # print(npz_files)
+
+        for npz_file in tqdm(npz_files):
+            obs = np.load(npz_file)
+            self.actions.extend(unstack(obs['q_vector']))
+            self.states.extend(unstack(obs['observation']))
+            self.logprobs.extend(unstack(obs['logp_vector']))
+            self.rewards.extend(unstack(obs['r_vector']))
+            # self.is_terminals.extend()
 
 
 class ActorCritic(nn.Module):
@@ -173,14 +201,15 @@ class ActorCritic(nn.Module):
 
 class PPO:
     # def __init__(self, state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std_init=0.6):
-    def __init__(self, feature_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space=False, action_std_init=0.6):
+    # def __init__(self, feature_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space=False, action_std_init=0.6):
+    def __init__(self, feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, has_continuous_action_space=False, action_std_init=0.6):
 
         self.has_continuous_action_space = has_continuous_action_space
 
         if has_continuous_action_space:
             self.action_std = action_std_init
 
-        self.gamma = gamma
+        # self.gamma = gamma
         self.eps_clip = eps_clip
         self.K_epochs = K_epochs
         
@@ -239,9 +268,9 @@ class PPO:
                 state = torch.FloatTensor(state).to(device)
                 action, action_logprob = self.policy_old.act(state)
 
-            self.buffer.states.append(state)
-            self.buffer.actions.append(action)
-            self.buffer.logprobs.append(action_logprob)
+            # self.buffer.states.append(state)
+            # self.buffer.actions.append(action)
+            # self.buffer.logprobs.append(action_logprob)
 
             return action.detach().cpu().numpy().flatten()
 
@@ -250,9 +279,9 @@ class PPO:
                 state = torch.FloatTensor(state).to(device)
                 action, action_logprob = self.policy_old.act(state)
             
-            self.buffer.states.append(state)
-            self.buffer.actions.append(action)
-            self.buffer.logprobs.append(action_logprob)
+            # self.buffer.states.append(state)
+            # self.buffer.actions.append(action)
+            # self.buffer.logprobs.append(action_logprob)
 
             return action.item()
 
@@ -260,14 +289,16 @@ class PPO:
     def update(self):
 
         # Monte Carlo estimate of returns
-        rewards = []
+        # rewards = []
         discounted_reward = 0
-        for reward, is_terminal in zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals)):
-            if is_terminal:
-                discounted_reward = 0
-            discounted_reward = reward + (self.gamma * discounted_reward)
-            rewards.insert(0, discounted_reward)
+        # for reward, is_terminal in zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals)):
+        #     if is_terminal:
+        #         discounted_reward = 0
+        #     discounted_reward = reward + (self.gamma * discounted_reward)
+        #     rewards.insert(0, discounted_reward)
             
+        rewards = self.buffer.rewards
+
         # Normalizing the rewards
         rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
@@ -296,12 +327,16 @@ class PPO:
             surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
 
             # final loss of clipped objective PPO
-            loss = -torch.min(surr1, surr2) + 0.5*self.MseLoss(state_values, rewards) - 0.01*dist_entropy
+            loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
             
             # take gradient step
             self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()
+
+            writer.add_scalar('loss', loss.mean().item(), _)
+            writer.add_scalar('entropy', dist_entropy.mean().item(), _)
+            
             
         # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy.state_dict())
@@ -318,6 +353,10 @@ class PPO:
         self.policy_old.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
         self.policy.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
         
+    def fill_rollout_buffer(self, observation_path='./obs'):
+        self.buffer.clear()
+        self.buffer.fill(observation_path)
+
         
 if __name__ == "__main__":
 
@@ -325,14 +364,14 @@ if __name__ == "__main__":
     K_epochs = 80           # update policy for K epochs in one PPO update
 
     eps_clip = 0.2          # clip parameter for PPO
-    gamma = 0.99            # discount factor
+    # gamma = 0.99            # discount factor
 
     lr_actor = 0.0003       # learning rate for actor network
     lr_critic = 0.001       # learning rate for critic network
 
     feature_dim = 16
 
-    ppo = PPO(feature_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip)
+    ppo = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip)
 
     # tensor = torch.rand(4, 11, 15, 15)
     tensor = torch.rand(1, 11, 15, 15)
@@ -347,4 +386,36 @@ if __name__ == "__main__":
     logprobs, state_values, dist_entropy = ppo.policy.evaluate(tensor, action_tensor)
 
     print(action_tensor, logprobs, state_values, dist_entropy)
+
+    ppo.policy.train()
+    ppo.policy_old.train()
+
+    random_seed = 0
+
+    env_name = 'Bomberland'
+
+    run_num_pretrained = 0      #### change this to prevent overwriting weights in same env_name folder
+
+    directory = "PPO_preTrained"
+    if not os.path.exists(directory):
+          os.makedirs(directory)
+
+    directory = directory + '/' + env_name + '/'
+    if not os.path.exists(directory):
+          os.makedirs(directory)
+
+    checkpoint_path = directory + "PPO_{}_{}_{}.pth".format(env_name, random_seed, run_num_pretrained)
+    print("save checkpoint path : " + checkpoint_path)
+
+    ppo.load(checkpoint_path)
+
+    ppo.fill_rollout_buffer()
+    ppo.update()
+
+    print("--------------------------------------------------------------------------------------------")
+    print("saving model at : " + checkpoint_path)
+    ppo.save(checkpoint_path)
+    print("model saved")
+    print("--------------------------------------------------------------------------------------------")
+
 

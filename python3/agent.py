@@ -100,7 +100,7 @@ class Agent():
             action = np.random.choice(range(len(actions)), p=prob)
             
             decisions[unit_id].update({'action': actions[action]})
-            decisions[unit_id].update({'logprob': np.log(prob[action])})
+            decisions[unit_id].update({'log_prob': np.log(prob[action])})
 
             action = actions[action]
 
