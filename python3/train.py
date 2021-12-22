@@ -2,6 +2,7 @@
 
 import os
 import glob
+from glob import glob
 import time
 from datetime import datetime
 
@@ -84,46 +85,54 @@ def train():
 
     #### log files for multiple runs are NOT overwritten
 
-    log_dir = "PPO_logs"
-    if not os.path.exists(log_dir):
-          os.makedirs(log_dir)
+    # log_dir = "PPO_logs"
+    # if not os.path.exists(log_dir):
+    #       os.makedirs(log_dir)
 
-    env_name = 'Bomberland'
-    log_dir = log_dir + '/' + env_name + '/'
-    if not os.path.exists(log_dir):
-          os.makedirs(log_dir)
+    # env_name = 'Bomberland'
+    # log_dir = log_dir + '/' + env_name + '/'
+    # if not os.path.exists(log_dir):
+    #       os.makedirs(log_dir)
 
 
     #### get number of log files in log directory
-    run_num = 0
-    current_num_files = next(os.walk(log_dir))[2]
-    run_num = len(current_num_files)
+    # run_num = 0
+    # current_num_files = next(os.walk(log_dir))[2]
+    # run_num = len(current_num_files)
 
 
     #### create new log file for each run
-    log_f_name = log_dir + '/PPO_' + env_name + "_log_" + str(run_num) + ".csv"
+    # log_f_name = log_dir + '/PPO_' + env_name + "_log_" + str(run_num) + ".csv"
 
-    print("current logging run number for " + env_name + " : ", run_num)
-    print("logging at : " + log_f_name)
+    # print("current logging run number for " + env_name + " : ", run_num)
+    # print("logging at : " + log_f_name)
 
     #####################################################
 
 
     ################### checkpointing ###################
 
-    run_num_pretrained = 0      #### change this to prevent overwriting weights in same env_name folder
+    # run_num_pretrained = 0      #### change this to prevent overwriting weights in same env_name folder
+    steps = 0
+
+    run_name = 'exp'
 
     directory = "PPO_preTrained"
     if not os.path.exists(directory):
           os.makedirs(directory)
 
-    directory = directory + '/' + env_name + '/'
+    directory = directory + '/' + run_name + '/'
     if not os.path.exists(directory):
           os.makedirs(directory)
 
+    past_checkpoints = sorted(glob(directory + "*.pth"))
+    last_checkpoint = None
+    if len(past_checkpoints) > 0:
+        last_checkpoint = past_checkpoints[-1]
+        steps = int(last_checkpoint.strip('.pth').split('_')[-1])
 
-    checkpoint_path = directory + "PPO_{}_{}_{}.pth".format(env_name, random_seed, run_num_pretrained)
-    print("save checkpoint path : " + checkpoint_path)
+    checkpoint_path = directory + "PPO_{}_{}_{:09d}.pth".format(run_name, random_seed, steps)
+    print("save checkpoint path: " + checkpoint_path)
 
     #####################################################
 
@@ -132,19 +141,19 @@ def train():
 
     print("--------------------------------------------------------------------------------------------")
 
-    print("max training timesteps : ", max_training_timesteps)
-    print("max timesteps per episode : ", max_ep_len)
+    # print("max training timesteps : ", max_training_timesteps)
+    # print("max timesteps per episode : ", max_ep_len)
 
-    print("model saving frequency : " + str(save_model_freq) + " timesteps")
-    print("log frequency : " + str(log_freq) + " timesteps")
-    print("printing average reward over episodes in last : " + str(print_freq) + " timesteps")
+    # print("model saving frequency : " + str(save_model_freq) + " timesteps")
+    print("log frequency: " + str(log_freq) + " timesteps")
+    print("printing average reward over episodes in last: " + str(print_freq) + " timesteps")
 
-    print("--------------------------------------------------------------------------------------------")
+    # print("--------------------------------------------------------------------------------------------")
 
     # print("state space dimension : ", state_dim)
     # print("action space dimension : ", action_dim)
 
-    print("--------------------------------------------------------------------------------------------")
+    # print("--------------------------------------------------------------------------------------------")
 
     # if has_continuous_action_space:
     #     print("Initializing a continuous action space policy")
@@ -189,10 +198,14 @@ def train():
 
     feature_dim=16
 
-    ppo_agent = PPO(feature_dim,
-                    lr_actor, lr_critic, gamma, K_epochs, eps_clip, 
-                    has_continuous_action_space=False, action_std=None)
+    # ppo_agent = PPO(feature_dim,
+    #                 lr_actor, lr_critic, gamma, K_epochs, eps_clip, 
+    #                 has_continuous_action_space=False, action_std=None)
 
+    ppo_agent = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name)
+    if last_checkpoint is not None:
+        print("load checkpoint path: " + last_checkpoint)
+        ppo_agent.load(last_checkpoint)
 
     # track total training time
     start_time = datetime.now().replace(microsecond=0)
@@ -202,21 +215,34 @@ def train():
 
 
     # logging file
-    log_f = open(log_f_name,"w+")
-    log_f.write('episode,timestep,reward\n')
+    # log_f = open(log_f_name,"w+")
+    # log_f.write('episode,timestep,reward\n')
 
 
     # printing and logging variables
-    print_running_reward = 0
-    print_running_episodes = 0
+    # print_running_reward = 0
+    # print_running_episodes = 0
 
-    log_running_reward = 0
-    log_running_episodes = 0
+    # log_running_reward = 0
+    # log_running_episodes = 0
 
-    time_step = 0
-    i_episode = 0
+    # time_step = 0
+    # i_episode = 0
 
+    # for i in range(0, 3):
+    for i in range(0, 1):
+        ppo_agent.fill_rollout_buffer()
+        steps = ppo_agent.update(steps)
 
+    # print("--------------------------------------------------------------------------------------------")
+    checkpoint_path = directory + "PPO_{}_{}_{:09d}.pth".format(run_name, random_seed, steps)
+    print("saving model at : " + checkpoint_path)
+    ppo_agent.save(checkpoint_path)
+    print("model saved")
+    print("Elapsed Time  : ", datetime.now().replace(microsecond=0) - start_time)
+    print("--------------------------------------------------------------------------------------------")
+
+    '''
     # training loop
     while time_step <= max_training_timesteps:
 
@@ -247,29 +273,29 @@ def train():
             #     ppo_agent.decay_action_std(action_std_decay_rate, min_action_std)
 
             # log in logging file
-            if time_step % log_freq == 0:
+            # if time_step % log_freq == 0:
 
-                # log average reward till last episode
-                log_avg_reward = log_running_reward / log_running_episodes
-                log_avg_reward = round(log_avg_reward, 4)
+            #     # log average reward till last episode
+            #     log_avg_reward = log_running_reward / log_running_episodes
+            #     log_avg_reward = round(log_avg_reward, 4)
 
-                log_f.write('{},{},{}\n'.format(i_episode, time_step, log_avg_reward))
-                log_f.flush()
+            #     log_f.write('{},{},{}\n'.format(i_episode, time_step, log_avg_reward))
+            #     log_f.flush()
 
-                log_running_reward = 0
-                log_running_episodes = 0
+            #     log_running_reward = 0
+            #     log_running_episodes = 0
 
             # printing average reward
-            if time_step % print_freq == 0:
+            # if time_step % print_freq == 0:
 
-                # print average reward till last episode
-                print_avg_reward = print_running_reward / print_running_episodes
-                print_avg_reward = round(print_avg_reward, 2)
+            #     # print average reward till last episode
+            #     print_avg_reward = print_running_reward / print_running_episodes
+            #     print_avg_reward = round(print_avg_reward, 2)
 
-                print("Episode : {} \t\t Timestep : {} \t\t Average Reward : {}".format(i_episode, time_step, print_avg_reward))
+            #     print("Episode : {} \t\t Timestep : {} \t\t Average Reward : {}".format(i_episode, time_step, print_avg_reward))
 
-                print_running_reward = 0
-                print_running_episodes = 0
+            #     print_running_reward = 0
+            #     print_running_episodes = 0
 
             # save model weights
             if time_step % save_model_freq == 0:
@@ -299,21 +325,18 @@ def train():
         i_episode += 1
 
 
-    log_f.close()
+    # log_f.close()
     # env.close()
-
-
+    '''
 
 
     # print total training time
-    print("============================================================================================")
-    end_time = datetime.now().replace(microsecond=0)
-    print("Started training at (GMT) : ", start_time)
-    print("Finished training at (GMT) : ", end_time)
-    print("Total training time  : ", end_time - start_time)
-    print("============================================================================================")
-
-
+    # print("============================================================================================")
+    # end_time = datetime.now().replace(microsecond=0)
+    # print("Started training at (GMT) : ", start_time)
+    # print("Finished training at (GMT) : ", end_time)
+    # print("Total training time  : ", end_time - start_time)
+    # print("============================================================================================")
 
 
 if __name__ == '__main__':

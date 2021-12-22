@@ -8,6 +8,14 @@ import json
 import numpy as np
 import shutil
 
+from glob import glob
+from PPO import PPO
+from tensorboardX import SummaryWriter
+
+from json2npy import observe_entities, observe_units, observe_empty, TYPE2CODE
+
+MODEL = None
+
 # a: ammunition
 # b: Bomb
 # x: Blast
@@ -16,15 +24,15 @@ import shutil
 # o: Ore Block
 # w: Wooden Block
 
-TYPE2CODE = {
-    'a': 1,
-    'b': 2,
-    'x': 3,
-    'bp': 4,
-    'm': 5,
-    'o': 6,
-    'w': 7,
-}
+# TYPE2CODE = {
+#     'a': 1,
+#     'b': 2,
+#     'x': 3,
+#     'bp': 4,
+#     'm': 5,
+#     'o': 6,
+#     'w': 7,
+# }
 
 def visualize_entities(entities):
     board = [['_'] * 15 for i in range(15)]
@@ -36,18 +44,19 @@ def visualize_entities(entities):
         print(''.join(line))
     print()
 
-def observe_entities(entities):
-    board = [[0] * 15 for i in range(15)]
+# def observe_entities(entities):
+#     board = [[0] * 15 for i in range(15)]
     
-    for entity in entities:
-        board[entity['x']][entity['y']] = TYPE2CODE[entity['type']]
+#     for entity in entities:
+#         board[entity['x']][entity['y']] = TYPE2CODE[entity['type']]
     
-    return np.array(board)
+#     return np.array(board)
     
 
 
 uri = None
 agent_id = None
+
 # uri = os.environ.get(
 #     'GAME_CONNECTION_STRING') or "ws://127.0.0.1:3000/?role=agent&agentId=agentA&name=defaultName"
 
@@ -57,6 +66,7 @@ class Agent():
     def __init__(self):
 
         self.step = 0
+        self.team = 1 if agent_id == 'a' else -1
 
         self._client = GameState(uri)
 
@@ -91,16 +101,34 @@ class Agent():
 
         decisions = defaultdict(dict)
 
+        entities = game_state.get("entities")
+        board = observe_entities(entities)
+        unit_state = game_state.get("unit_state")
+        board, live_units = observe_units(board, unit_state)
+        board = observe_empty(board)
+
         # send each unit a random action
         for unit_id in my_units:
 
-            prob = np.random.random(len(actions))
-            prob = prob / np.sum(prob)
+            s = unit_state[unit_id]
 
-            action = np.random.choice(range(len(actions)), p=prob)
-            
+            if MODEL is not None and s['hp'] > 0:
+                u_board = np.copy(board)
+                u_board[TYPE2CODE['unit'], :, :] = self.team * u_board[TYPE2CODE['unit'], :, :]
+                u_board[TYPE2CODE['p'], s['coordinates'][0], s['coordinates'][1]] = 1
+                observation = np.expand_dims(u_board, axis=0)
+
+                action, log_prob = MODEL.select_action(observation)
+                # print(action, log_prob)
+            else:
+                prob = np.random.random(len(actions))
+                prob = prob / np.sum(prob)
+
+                action = np.random.choice(range(len(actions)), p=prob)
+                log_prob = np.log(prob[action])
+
             decisions[unit_id].update({'action': actions[action]})
-            decisions[unit_id].update({'log_prob': np.log(prob[action])})
+            decisions[unit_id].update({'log_prob': log_prob})
 
             action = actions[action]
 
@@ -117,7 +145,7 @@ class Agent():
                 print(f"Unhandled action: {action} for unit {unit_id}")
 
         if agent_id == 'a':
-            entities = game_state.get("entities")
+            # entities = game_state.get("entities")
             # visualize_entities(entities)
             # print(decisions)
 
@@ -131,7 +159,7 @@ class Agent():
                 decisions_json = json.dumps(decisions, indent=4) 
                 f.write(decisions_json)
 
-            unit_state = game_state.get("unit_state")
+            # unit_state = game_state.get("unit_state")
             with open(f'trajectory/{self.step:03d}_status.json', 'w') as f:
                 unit_state_json = json.dumps(unit_state, indent=4) 
                 f.write(unit_state_json)
@@ -148,11 +176,13 @@ class Agent():
 
 
 def main():
-    Agent()
+    agent = Agent()
+    return agent.step
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--id', type=str, help='Agent ID')
+    parser.add_argument('--ep', type=int, help='Episodes', default=0)
     args = parser.parse_args()
 
     agent_id = args.id
@@ -166,4 +196,34 @@ if __name__ == "__main__":
     else:
         assert f'Invalid agent ID {args.id}'
 
-    main()
+    feature_dim=16
+    lr_actor = 0.0003
+    lr_critic = 0.001
+    K_epochs = 80
+    eps_clip = 0.2         
+
+    run_name = 'exp'
+
+    ppo_agent = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name)
+
+    ppo_agent.policy.eval()
+    ppo_agent.policy_old.eval()
+
+    directory = "PPO_preTrained"
+    directory = directory + '/' + run_name + '/'
+
+    past_checkpoints = sorted(glob(directory + "*.pth"))
+    last_checkpoint = past_checkpoints[-1]
+
+    print("Loding Checkpoint: " + last_checkpoint)
+    ppo_agent.load(last_checkpoint)
+
+    MODEL = ppo_agent
+
+    steps = main()
+
+    if args.id == 'a':
+        writer = SummaryWriter(f'runs/{run_name}')
+        writer.add_scalar('episode_len', steps, args.ep)
+
+    

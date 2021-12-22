@@ -13,8 +13,6 @@ from tqdm.auto import tqdm
 
 from tensorboardX import SummaryWriter
 
-writer = SummaryWriter('runs/exp-1')
-
 ACTION_SPACE_SIZE = 6
 OBS_DIM = 11
 MAP_SIZE = 15
@@ -69,6 +67,7 @@ class RolloutBuffer:
 
         # print(npz_files)
 
+        print('Filling Buffer')
         for npz_file in tqdm(npz_files):
             obs = np.load(npz_file)
             self.actions.extend(unstack(obs['q_vector']))
@@ -202,7 +201,8 @@ class ActorCritic(nn.Module):
 class PPO:
     # def __init__(self, state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std_init=0.6):
     # def __init__(self, feature_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space=False, action_std_init=0.6):
-    def __init__(self, feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, has_continuous_action_space=False, action_std_init=0.6):
+    def __init__(self, feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name,
+        has_continuous_action_space=False, action_std_init=0.6):
 
         self.has_continuous_action_space = has_continuous_action_space
 
@@ -227,6 +227,8 @@ class PPO:
         self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
+
+        self.writer = SummaryWriter(f'runs/{run_name}')
 
 
     def set_action_std(self, new_action_std):
@@ -283,10 +285,10 @@ class PPO:
             # self.buffer.actions.append(action)
             # self.buffer.logprobs.append(action_logprob)
 
-            return action.item()
+            return action.item(), action_logprob.item()
 
 
-    def update(self):
+    def update(self, starting_step=0):
 
         # Monte Carlo estimate of returns
         # rewards = []
@@ -310,7 +312,8 @@ class PPO:
 
         
         # Optimize policy for K epochs
-        for _ in range(self.K_epochs):
+        print("Policy Update")
+        for step in tqdm(range(starting_step, starting_step + self.K_epochs)):
 
             # Evaluating old actions and values
             logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
@@ -327,22 +330,25 @@ class PPO:
             surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
 
             # final loss of clipped objective PPO
-            loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
+            v_loss = 0.5 * self.MseLoss(state_values, rewards)
+            loss = -torch.min(surr1, surr2) + v_loss - 0.01 * dist_entropy
             
             # take gradient step
             self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()
 
-            writer.add_scalar('loss', loss.mean().item(), _)
-            writer.add_scalar('entropy', dist_entropy.mean().item(), _)
+            self.writer.add_scalar('loss', loss.mean().item(), step)
+            self.writer.add_scalar('value_loss', v_loss.mean().item(), step)
+            self.writer.add_scalar('entropy', dist_entropy.mean().item(), step)
             
             
         # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy.state_dict())
 
+        return starting_step + self.K_epochs 
         # clear buffer
-        self.buffer.clear()
+        # self.buffer.clear()
     
     
     def save(self, checkpoint_path):
@@ -372,6 +378,7 @@ if __name__ == "__main__":
     feature_dim = 16
 
     ppo = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip)
+    
 
     # tensor = torch.rand(4, 11, 15, 15)
     tensor = torch.rand(1, 11, 15, 15)
@@ -379,7 +386,7 @@ if __name__ == "__main__":
     ppo.policy.eval()
     ppo.policy_old.eval()
 
-    action = ppo.select_action(tensor)
+    action, log_prob = ppo.select_action(tensor)
     
     action_tensor = torch.tensor(action).reshape([1, 1])
 
