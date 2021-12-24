@@ -377,11 +377,14 @@ if __name__ == "__main__":
 
     feature_dim = 16
 
-    ppo = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip)
+    run_name = 'exp'
+
+    ppo = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name)
     
 
     # tensor = torch.rand(4, 11, 15, 15)
     tensor = torch.rand(1, 11, 15, 15)
+    # tensor = tensor.to(device)
 
     ppo.policy.eval()
     ppo.policy_old.eval()
@@ -389,6 +392,8 @@ if __name__ == "__main__":
     action, log_prob = ppo.select_action(tensor)
     
     action_tensor = torch.tensor(action).reshape([1, 1])
+    tensor = tensor.to(device)
+    action_tensor = action_tensor.to(device)
 
     logprobs, state_values, dist_entropy = ppo.policy.evaluate(tensor, action_tensor)
 
@@ -399,7 +404,7 @@ if __name__ == "__main__":
 
     random_seed = 0
 
-    env_name = 'Bomberland'
+    # env_name = 'Bomberland'
 
     run_num_pretrained = 0      #### change this to prevent overwriting weights in same env_name folder
 
@@ -407,17 +412,17 @@ if __name__ == "__main__":
     if not os.path.exists(directory):
           os.makedirs(directory)
 
-    directory = directory + '/' + env_name + '/'
+    directory = directory + '/' + run_name + '/'
     if not os.path.exists(directory):
           os.makedirs(directory)
 
-    checkpoint_path = directory + "PPO_{}_{}_{}.pth".format(env_name, random_seed, run_num_pretrained)
+    checkpoint_path = directory + "PPO_{}_{}_{}.pth".format(run_name, random_seed, run_num_pretrained)
     print("save checkpoint path : " + checkpoint_path)
 
-    ppo.load(checkpoint_path)
+    # ppo.load(checkpoint_path)
 
-    ppo.fill_rollout_buffer()
-    ppo.update()
+    # ppo.fill_rollout_buffer()
+    # ppo.update()
 
     print("--------------------------------------------------------------------------------------------")
     print("saving model at : " + checkpoint_path)
