@@ -146,11 +146,47 @@ def observe_empty(board):
     board[0, :, :] = (np.argmax(board, axis=0) == 0)
     return board
 
-def rotate_observation(observation):
+def duplicate_observation(observation, q_vector, r_vector, logp_vector):
 
-    rotated_observation = np.copy(observation)
+    obs = np.copy(observation)
+    observation = np.concatenate([observation, np.flip(obs, axis=2)])
 
-    return rotated_observation
+    for i in range(3):
+        obs = np.rot90(obs, k=1, axes=(2, 3))
+        observation = np.concatenate([observation, obs])
+        observation = np.concatenate([observation, np.flip(obs, axis=2)])
+
+    q_vector = duplicate_q_vector(q_vector)
+    r_vector = np.tile(r_vector, 8)
+    logp_vector = np.tile(logp_vector, 8)
+
+    return observation, q_vector, r_vector, logp_vector
+
+def duplicate_q_vector(q_vector):
+
+    vector = np.copy(q_vector)
+    q_vector = np.concatenate([q_vector, flip_q_vector(q_vector)])
+
+    for i in range(3):
+        vector = rotate_q_vector(vector)
+        q_vector = np.concatenate([q_vector, vector])
+        q_vector = np.concatenate([q_vector, flip_q_vector(vector)])
+
+    return q_vector
+
+def rotate_q_vector(q_vector):
+    return [rotate_q(q) for q in q_vector]
+
+def rotate_q(q):
+    # actions = ["up", "down", "left", "right", "bomb", "detonate"]
+    return [3, 2, 0, 1, 4, 5][q]
+
+def flip_q_vector(q_vector):
+    return [flip_q(q) for q in q_vector]
+
+def flip_q(q):
+    # actions = ["up", "down", "left", "right", "bomb", "detonate"]
+    return [0, 1, 3, 2, 4, 5][q]
 
 if __name__ == "__main__":
 
@@ -268,11 +304,22 @@ if __name__ == "__main__":
 
         os.makedirs(f'./obs/{args.dir}', exist_ok=True)
 
+
+
         np.savez(f'./obs/{args.dir}/{i:03d}_obs.npz',
                  observation=observation, 
                  q_vector=q_vector, 
                  r_vector=r_vector,
                  logp_vector=logp_vector)
+
+        observation, q_vector, r_vector, logp_vector = duplicate_observation(observation, q_vector, r_vector, logp_vector)
+
+        print(observation.shape)
+        # print(observation)
+        print(q_vector.shape, q_vector)
+        print(r_vector.shape, r_vector)
+        print(logp_vector.shape, logp_vector)
+        break
 
         # print('After:', last_rewards, r_vector)
         # print(('{:+0.2f} ' * len(r_vector)).format(*r_vector))
@@ -287,3 +334,5 @@ if __name__ == "__main__":
             # break
 
         # break
+
+

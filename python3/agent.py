@@ -196,7 +196,7 @@ if __name__ == "__main__":
     else:
         assert f'Invalid agent ID {args.id}'
 
-    feature_dim=16
+    feature_dim = 16
     lr_actor = 0.0003
     lr_critic = 0.001
     K_epochs = 80
