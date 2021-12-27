@@ -2,6 +2,8 @@ import numpy as np
 from glob import glob
 import json
 from tqdm.auto import tqdm
+import argparse
+import os
 
 # np.set_printoptions(precision=2)
 
@@ -154,6 +156,10 @@ if __name__ == "__main__":
 
     GAMMA = 0.90
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dir', type=str)
+    args = parser.parse_args()
+
     json_files = sorted(glob('./trajectory/*.json'))
     match_len = len(json_files) // 4
     status_list = [json_files[4*i:4*i+4] for i in range(match_len)]
@@ -260,7 +266,9 @@ if __name__ == "__main__":
         # else:
         #     pass
 
-        np.savez(f'./obs/{i:03d}_obs.npz',
+        os.makedirs(f'./obs/{args.dir}', exist_ok=True)
+
+        np.savez(f'./obs/{args.dir}/{i:03d}_obs.npz',
                  observation=observation, 
                  q_vector=q_vector, 
                  r_vector=r_vector,

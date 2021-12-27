@@ -5,22 +5,32 @@ from time import sleep
 from glob import glob
 import os
 
+import shutil
+
 LOOP_NUM = 10
 DOCKER_WAIT_TIME = 5
+KEEP_OBS = 3
+
+
 
 if __name__ == "__main__":
+
+    old_json_files = glob('./trajectory/*.json')
+    for file in old_json_files:
+        os.remove(file)
+
+    old_npz_dirs = sorted(glob('./obs/*'))
+    for folder in old_npz_dirs:
+        print(f"Removing Past Experiences: {folder}")
+        shutil.rmtree(folder)
+
     for i in tqdm(range(0, LOOP_NUM)):
 
         old_json_files = glob('./trajectory/*.json')
         for file in old_json_files:
             os.remove(file)
 
-        old_npz_files = glob('./obs/*.npz')
-        for file in old_npz_files:
-            os.remove(file)
-
-
-        p_docker = subprocess.Popen(['bash', '../server-run.sh']) 
+        p_docker = subprocess.Popen(['bash', '../server-run.sh'])
 
         sleep(DOCKER_WAIT_TIME)
 
@@ -30,9 +40,19 @@ if __name__ == "__main__":
         [p.wait() for p in (p_docker, p_a, p_b)]
         print("Episode Completed")
 
-        p_batch = subprocess.Popen(['python', 'json2npy.py'])
+        p_batch = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}'])
         p_batch.wait()
         print("Building Observation Completed")
+
+        # old_npz_files = glob('./obs/*.npz')
+        # for file in old_npz_files:
+        #     os.remove(file)
+
+        old_npz_dirs = sorted(glob('./obs/*'))
+        if len(old_npz_dirs) > KEEP_OBS:
+            for folder in old_npz_dirs[:-KEEP_OBS]:
+                print(f"Removing Past Experiences: {folder}")
+                shutil.rmtree(folder)
 
         p_train = subprocess.Popen(['python', 'train.py'])
         p_train.wait()

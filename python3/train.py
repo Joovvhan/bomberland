@@ -22,6 +22,8 @@ from PPO import PPO
 
 def train():
 
+    K_epochs = 1
+
     print("============================================================================================")
 
 
@@ -52,7 +54,7 @@ def train():
     ################ PPO hyperparameters ################
 
     update_timestep = max_ep_len * 4      # update policy every n timesteps
-    K_epochs = 80               # update policy for K epochs in one PPO update
+    # K_epochs = 80               # update policy for K epochs in one PPO update
 
     eps_clip = 0.2          # clip parameter for PPO
     gamma = 0.99            # discount factor

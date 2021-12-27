@@ -58,7 +58,7 @@ class RolloutBuffer:
         del self.is_terminals[:]
 
 
-    def fill(self, observation_path='./obs'):
+    def fill(self, observation_path='./obs/*'):
 
         def unstack(array):
             return [torch.tensor(array[i], dtype=torch.float) for i in range(array.shape[0])]
@@ -359,7 +359,7 @@ class PPO:
         self.policy_old.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
         self.policy.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
         
-    def fill_rollout_buffer(self, observation_path='./obs'):
+    def fill_rollout_buffer(self, observation_path='./obs/*'):
         self.buffer.clear()
         self.buffer.fill(observation_path)
 
