@@ -179,7 +179,7 @@ def rotate_q_vector(q_vector):
 
 def rotate_q(q):
     # actions = ["up", "down", "left", "right", "bomb", "detonate"]
-    return [3, 2, 0, 1, 4, 5][q]
+    return [2, 3, 1, 0, 4, 5][q]
 
 def flip_q_vector(q_vector):
     return [flip_q(q) for q in q_vector]
@@ -211,7 +211,11 @@ if __name__ == "__main__":
         'h': 0.0,
     })
 
+    count = 0
+
     for i in tqdm(reversed(range(len(status_list) - 1))):
+
+        count += 1
 
         # print('Before:', last_rewards)
 
@@ -304,22 +308,22 @@ if __name__ == "__main__":
 
         os.makedirs(f'./obs/{args.dir}', exist_ok=True)
 
-
-
-        np.savez(f'./obs/{args.dir}/{i:03d}_obs.npz',
-                 observation=observation, 
-                 q_vector=q_vector, 
-                 r_vector=r_vector,
-                 logp_vector=logp_vector)
-
         observation, q_vector, r_vector, logp_vector = duplicate_observation(observation, q_vector, r_vector, logp_vector)
 
-        print(observation.shape)
-        # print(observation)
-        print(q_vector.shape, q_vector)
-        print(r_vector.shape, r_vector)
-        print(logp_vector.shape, logp_vector)
-        break
+        np.savez(f'./obs/{args.dir}/{i:03d}_obs.npz',
+            observation=observation, 
+            q_vector=q_vector, 
+            r_vector=r_vector,
+            logp_vector=logp_vector)
+
+        if count > 5:
+            break
+
+        # print(observation.shape)
+        # # print(observation)
+        # print(q_vector.shape, q_vector)
+        # print(r_vector.shape, r_vector)
+        # print(logp_vector.shape, logp_vector)
 
         # print('After:', last_rewards, r_vector)
         # print(('{:+0.2f} ' * len(r_vector)).format(*r_vector))
