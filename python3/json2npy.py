@@ -211,11 +211,7 @@ if __name__ == "__main__":
         'h': 0.0,
     })
 
-    count = 0
-
     for i in tqdm(reversed(range(len(status_list) - 1))):
-
-        count += 1
 
         # print('Before:', last_rewards)
 
@@ -315,9 +311,6 @@ if __name__ == "__main__":
             q_vector=q_vector, 
             r_vector=r_vector,
             logp_vector=logp_vector)
-
-        if count > 5:
-            break
 
         # print(observation.shape)
         # # print(observation)

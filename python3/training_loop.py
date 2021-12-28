@@ -9,9 +9,9 @@ import shutil
 
 LOOP_NUM = 10
 DOCKER_WAIT_TIME = 5
-KEEP_OBS = 3
+KEEP_OBS = 2
 
-
+EVALUATION_TERM = 1
 
 if __name__ == "__main__":
 
@@ -57,4 +57,17 @@ if __name__ == "__main__":
         p_train = subprocess.Popen(['python', 'train.py'])
         p_train.wait()
         print("Training Completed")
+
+
+        if (i % EVALUATION_TERM) == 0:
+
+            p_docker = subprocess.Popen(['bash', '../server-run.sh'])
+
+            sleep(DOCKER_WAIT_TIME)
+
+            p_a = subprocess.Popen(['python', 'agent.py', '--id=a', '--eval=True', f'--ep={i}'], stdout=DEVNULL, stderr=DEVNULL)
+            p_b = subprocess.Popen(['python', 'agent.py', '--id=b', '--eval=True'])
+
+            [p.wait() for p in (p_docker, p_a, p_b)]
+            print("Evaluation Completed")
 

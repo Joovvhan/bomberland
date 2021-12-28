@@ -183,6 +183,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--id', type=str, help='Agent ID')
     parser.add_argument('--ep', type=int, help='Episodes', default=0)
+    parser.add_argument('--eval', type=bool, help='Evaluation', default=False)
     args = parser.parse_args()
 
     agent_id = args.id
@@ -202,28 +203,34 @@ if __name__ == "__main__":
     K_epochs = 80
     eps_clip = 0.2         
 
-    run_name = 'exp'
+    if args.id == 'b' and args.eval:
+        MODEL = None
+    else:
+        run_name = 'exp'
 
-    ppo_agent = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name)
+        ppo_agent = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name)
 
-    ppo_agent.policy.eval()
-    ppo_agent.policy_old.eval()
+        ppo_agent.policy.eval()
+        ppo_agent.policy_old.eval()
 
-    directory = "PPO_preTrained"
-    directory = directory + '/' + run_name + '/'
+        directory = "PPO_preTrained"
+        directory = directory + '/' + run_name + '/'
 
-    past_checkpoints = sorted(glob(directory + "*.pth"))
-    last_checkpoint = past_checkpoints[-1]
+        past_checkpoints = sorted(glob(directory + "*.pth"))
+        last_checkpoint = past_checkpoints[-1]
 
-    print("Loding Checkpoint: " + last_checkpoint)
-    ppo_agent.load(last_checkpoint)
+        print("Loding Checkpoint: " + last_checkpoint)
+        ppo_agent.load(last_checkpoint)
 
-    MODEL = ppo_agent
+        MODEL = ppo_agent
 
     steps = main()
 
     if args.id == 'a':
         writer = SummaryWriter(f'runs/{run_name}')
-        writer.add_scalar('episode_len', steps, args.ep)
+        if not args.eval:
+            writer.add_scalar('episode_len', steps, args.ep)
+        else:
+            writer.add_scalar('episode_len/eval', steps, args.ep)
 
     
