@@ -7,9 +7,9 @@ import os
 
 import shutil
 
-LOOP_NUM = 10
+LOOP_NUM = 300
 DOCKER_WAIT_TIME = 5
-KEEP_OBS = 2
+KEEP_OBS = 10
 
 EVALUATION_TERM = 1
 

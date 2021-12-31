@@ -5,6 +5,8 @@ import torch.nn as nn
 from torch.distributions import MultivariateNormal
 from torch.distributions import Categorical
 
+from torch.utils.data import Dataset, DataLoader
+
 from glob import glob
 import os
 import numpy as np
@@ -16,6 +18,22 @@ from tensorboardX import SummaryWriter
 ACTION_SPACE_SIZE = 6
 OBS_DIM = 11
 MAP_SIZE = 15
+
+BATCH_SIZE = 1024
+
+
+class BomberDataset(Dataset):
+    def __init__(self, states, actions, logprobs, rewards):
+        self.states = states 
+        self.actions = actions
+        self.logprobs = logprobs
+        self.rewards = rewards 
+
+    def __len__(self):
+        return len(self.rewards)
+
+    def __getitem__(self, idx):
+        return self.states[idx], self.actions[idx], self.logprobs[idx], self.rewards[idx]
 
 
 ################################## set device ##################################
@@ -302,45 +320,71 @@ class PPO:
         rewards = self.buffer.rewards
 
         # Normalizing the rewards
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
+        # rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
+        # rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
+
+        # # convert list to tensor
+        # old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(device)
+        # old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
+        # old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(device)
+
+        rewards = torch.tensor(rewards, dtype=torch.float32)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
 
         # convert list to tensor
-        old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(device)
-        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
-        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(device)
+        old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach()
+        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach()
+        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach()
 
+        training_data = BomberDataset(old_states, old_actions, old_logprobs, rewards)
+        train_dataloader = DataLoader(training_data, batch_size=BATCH_SIZE, shuffle=True)
         
         # Optimize policy for K epochs
         print("Policy Update")
         for step in tqdm(range(starting_step, starting_step + self.K_epochs)):
 
-            # Evaluating old actions and values
-            logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
+            loss_mean = list()
+            v_loss_mean = list()
+            dist_entropy_mean = list()
 
-            # match state_values tensor dimensions with rewards tensor
-            state_values = torch.squeeze(state_values)
-            
-            # Finding the ratio (pi_theta / pi_theta__old)
-            ratios = torch.exp(logprobs - old_logprobs.detach())
+            for states, actions, logprobs, rewards in train_dataloader:
 
-            # Finding Surrogate Loss
-            advantages = rewards - state_values.detach()   
-            surr1 = ratios * advantages
-            surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
+                states, actions, logprobs, rewards = states.to(device), actions.to(device), logprobs.to(device), rewards.to(device)
 
-            # final loss of clipped objective PPO
-            v_loss = 0.5 * self.MseLoss(state_values, rewards)
-            loss = -torch.min(surr1, surr2) + v_loss - 0.01 * dist_entropy
-            
-            # take gradient step
-            self.optimizer.zero_grad()
-            loss.mean().backward()
-            self.optimizer.step()
+                # Evaluating old actions and values
+                logprobs, state_values, dist_entropy = self.policy.evaluate(states, actions)
 
-            self.writer.add_scalar('loss', loss.mean().item(), step)
-            self.writer.add_scalar('value_loss', v_loss.mean().item(), step)
-            self.writer.add_scalar('entropy', dist_entropy.mean().item(), step)
+                # match state_values tensor dimensions with rewards tensor
+                state_values = torch.squeeze(state_values)
+                
+                # Finding the ratio (pi_theta / pi_theta__old)
+                ratios = torch.exp(logprobs - logprobs.detach())
+
+                # Finding Surrogate Loss
+                advantages = rewards - state_values.detach()   
+                surr1 = ratios * advantages
+                surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
+
+                # final loss of clipped objective PPO
+                v_loss = 0.5 * self.MseLoss(state_values, rewards)
+                loss = -torch.min(surr1, surr2) + v_loss - 0.01 * dist_entropy
+                
+                # take gradient step
+                self.optimizer.zero_grad()
+                loss.mean().backward()
+                self.optimizer.step()
+
+                loss_mean.append(loss.mean().item())
+                v_loss_mean.append(v_loss.mean().item())
+                dist_entropy_mean.append(dist_entropy.mean().item())
+
+            self.writer.add_scalar('loss', np.mean(loss_mean), step)
+            self.writer.add_scalar('value_loss', np.mean(v_loss_mean), step)
+            self.writer.add_scalar('entropy', np.mean(dist_entropy_mean), step)
+
+            # self.writer.add_scalar('loss', loss.mean().item(), step)
+            # self.writer.add_scalar('value_loss', v_loss.mean().item(), step)
+            # self.writer.add_scalar('entropy', dist_entropy.mean().item(), step)
             
             
         # Copy new weights into old policy

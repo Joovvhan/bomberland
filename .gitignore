@@ -7,6 +7,7 @@ python3/trajectory/
 python3/obs/
 python3/.ipynb_checkpoints/
 python3/*.ipynb
-
+python3/.vscode/
+python3/.vscode/
 python3/PPO_preTrained/
 python3/runs/

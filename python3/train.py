@@ -22,7 +22,7 @@ from PPO import PPO
 
 def train():
 
-    K_epochs = 1
+    # K_epochs = 1
 
     print("============================================================================================")
 
@@ -54,10 +54,10 @@ def train():
     ################ PPO hyperparameters ################
 
     update_timestep = max_ep_len * 4      # update policy every n timesteps
-    # K_epochs = 80               # update policy for K epochs in one PPO update
+    K_epochs = 80               # update policy for K epochs in one PPO update
 
     eps_clip = 0.2          # clip parameter for PPO
-    gamma = 0.99            # discount factor
+    # gamma = 0.99            # discount factor
 
     lr_actor = 0.0003       # learning rate for actor network
     lr_critic = 0.001       # learning rate for critic network
@@ -173,7 +173,7 @@ def train():
     print("PPO update frequency : " + str(update_timestep) + " timesteps")
     print("PPO K epochs : ", K_epochs)
     print("PPO epsilon clip : ", eps_clip)
-    print("discount factor (gamma) : ", gamma)
+    # print("discount factor (gamma) : ", gamma)
 
     print("--------------------------------------------------------------------------------------------")
 

@@ -217,11 +217,14 @@ if __name__ == "__main__":
         directory = directory + '/' + run_name + '/'
 
         past_checkpoints = sorted(glob(directory + "*.pth"))
-        last_checkpoint = past_checkpoints[-1]
+        if len(past_checkpoints) > 0:
+            last_checkpoint = past_checkpoints[-1]
 
-        print("Loding Checkpoint: " + last_checkpoint)
-        ppo_agent.load(last_checkpoint)
-
+            print("Loding Checkpoint: " + last_checkpoint)
+            ppo_agent.load(last_checkpoint)
+        else:
+            print("No Checkpoint Found")
+            
         MODEL = ppo_agent
 
     steps = main()
