@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
         sleep(DOCKER_WAIT_TIME)
 
-        p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--ep={i}'], stdout=DEVNULL, stderr=DEVNULL)
+        p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--ep={i}', '--save=True'], stdout=DEVNULL, stderr=DEVNULL)
         p_b = subprocess.Popen(['python', 'agent.py', '--id=b'])
 
         [p.wait() for p in (p_docker, p_a, p_b)]

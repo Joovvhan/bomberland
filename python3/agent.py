@@ -16,7 +16,7 @@ from json2npy import observe_entities, observe_units, observe_empty, TYPE2CODE
 
 MODEL = None
 
-SAVE = True
+SAVE = False
 
 # a: ammunition
 # b: Bomb
@@ -183,16 +183,18 @@ def main():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--id', type=str, help='Agent ID')
+    parser.add_argument('--id', type=str, help='Agent ID', default=None)
     parser.add_argument('--ep', type=int, help='Episodes', default=0)
     parser.add_argument('--port', type=int, help='Port', default=3000)
     parser.add_argument('--eval', type=bool, help='Evaluation', default=False)
-    parser.add_argument('--save', type=bool, help='Save trajectory', default=True)
+    parser.add_argument('--save', type=bool, help='Save trajectory', default=False)
     args = parser.parse_args()
 
     agent_id = args.id
 
-    if args.id == 'a':
+    if args.id is None:
+        uri = os.environ.get('GAME_CONNECTION_STRING')
+    elif args.id == 'a':
         shutil.rmtree('./trajectory')
         os.mkdir('./trajectory')
         uri = f"ws://127.0.0.1:{args.port}/?role=agent&agentId=agentA&name=defaultName"
