@@ -19,7 +19,7 @@ ACTION_SPACE_SIZE = 6
 OBS_DIM = 11
 MAP_SIZE = 15
 
-BATCH_SIZE = 1024
+BATCH_SIZE = 2048
 
 
 class BomberDataset(Dataset):

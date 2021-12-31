@@ -71,3 +71,7 @@ if __name__ == "__main__":
             [p.wait() for p in (p_docker, p_a, p_b)]
             print("Evaluation Completed")
 
+        # p_docker = subprocess.Popen(['bash', '../server-run-2.sh'])
+        # sleep(DOCKER_WAIT_TIME)
+        # p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--ep={i}', '--port=3001'], stdout=DEVNULL, stderr=DEVNULL)
+        # p_b = subprocess.Popen(['python', 'agent.py', '--id=b', '--port=3001'])

@@ -16,6 +16,8 @@ from json2npy import observe_entities, observe_units, observe_empty, TYPE2CODE
 
 MODEL = None
 
+SAVE = True
+
 # a: ammunition
 # b: Bomb
 # x: Blast
@@ -144,7 +146,7 @@ class Agent():
             else:
                 print(f"Unhandled action: {action} for unit {unit_id}")
 
-        if agent_id == 'a':
+        if agent_id == 'a' and SAVE:
             # entities = game_state.get("entities")
             # visualize_entities(entities)
             # print(decisions)
@@ -183,7 +185,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--id', type=str, help='Agent ID')
     parser.add_argument('--ep', type=int, help='Episodes', default=0)
+    parser.add_argument('--port', type=int, help='Port', default=3000)
     parser.add_argument('--eval', type=bool, help='Evaluation', default=False)
+    parser.add_argument('--save', type=bool, help='Save trajectory', default=True)
     args = parser.parse_args()
 
     agent_id = args.id
@@ -191,9 +195,9 @@ if __name__ == "__main__":
     if args.id == 'a':
         shutil.rmtree('./trajectory')
         os.mkdir('./trajectory')
-        uri = "ws://127.0.0.1:3000/?role=agent&agentId=agentA&name=defaultName"
+        uri = f"ws://127.0.0.1:{args.port}/?role=agent&agentId=agentA&name=defaultName"
     elif args.id == 'b':
-        uri = "ws://127.0.0.1:3000/?role=agent&agentId=agentB&name=defaultName"
+        uri = f"ws://127.0.0.1:{args.port}/?role=agent&agentId=agentB&name=defaultName"
     else:
         assert f'Invalid agent ID {args.id}'
 
@@ -203,8 +207,12 @@ if __name__ == "__main__":
     K_epochs = 80
     eps_clip = 0.2         
 
+    SAVE = args.save
+
     if args.id == 'b' and args.eval:
+
         MODEL = None
+    
     else:
         run_name = 'exp'
 
@@ -226,6 +234,8 @@ if __name__ == "__main__":
             print("No Checkpoint Found")
             
         MODEL = ppo_agent
+
+
 
     steps = main()
 
