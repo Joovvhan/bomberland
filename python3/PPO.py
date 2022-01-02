@@ -192,6 +192,12 @@ class ActorCritic(nn.Module):
         
         return action.detach(), action_logprob.detach()
     
+    def act_probs(self, state):
+
+        action_probs = self.actor(state)
+
+        return action_probs.detach()
+    
 
     def evaluate(self, state, action):
 
@@ -304,6 +310,15 @@ class PPO:
             # self.buffer.logprobs.append(action_logprob)
 
             return action.item(), action_logprob.item()
+
+    
+    def select_action_probs(self, state):
+            
+        with torch.no_grad():
+            state = torch.FloatTensor(state).to(device)
+            action_probs = self.policy_old.act_probs(state)
+
+        return action_probs.squeeze().detach().cpu().numpy()
 
 
     def update(self, starting_step=0):

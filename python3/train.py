@@ -16,13 +16,15 @@ import numpy as np
 
 from PPO import PPO
 
-
+import argparse
 
 ################################### Training ###################################
 
-def train():
+def train(args):
 
     # K_epochs = 1
+
+    run_name = args.run_name
 
     print("============================================================================================")
 
@@ -85,8 +87,6 @@ def train():
 
     ###################### logging ######################
 
-    #### log files for multiple runs are NOT overwritten
-
     # log_dir = "PPO_logs"
     # if not os.path.exists(log_dir):
     #       os.makedirs(log_dir)
@@ -117,7 +117,7 @@ def train():
     # run_num_pretrained = 0      #### change this to prevent overwriting weights in same env_name folder
     steps = 0
 
-    run_name = 'exp'
+    # run_name = 'exp-3'
 
     directory = "PPO_preTrained"
     if not os.path.exists(directory):
@@ -343,7 +343,11 @@ def train():
 
 if __name__ == '__main__':
 
-    train()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--run_name', type=str, help='run_name', default='exp')
+    args = parser.parse_args()
+
+    train(args)
     
     
     

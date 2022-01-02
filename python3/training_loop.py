@@ -6,14 +6,19 @@ from glob import glob
 import os
 
 import shutil
+import argparse
 
 LOOP_NUM = 300
 DOCKER_WAIT_TIME = 5
 KEEP_OBS = 10
 
-EVALUATION_TERM = 1
+EVALUATION_TERM = 100
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--run_name', type=str, help='run name', default='exp')
+    args = parser.parse_args()
 
     old_json_files = glob('./trajectory/*.json')
     for file in old_json_files:
@@ -34,8 +39,8 @@ if __name__ == "__main__":
 
         sleep(DOCKER_WAIT_TIME)
 
-        p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--ep={i}', '--save=True'], stdout=DEVNULL, stderr=DEVNULL)
-        p_b = subprocess.Popen(['python', 'agent.py', '--id=b'])
+        p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True'], stdout=DEVNULL, stderr=DEVNULL)
+        p_b = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}'])
 
         [p.wait() for p in (p_docker, p_a, p_b)]
         print("Episode Completed")
@@ -54,7 +59,7 @@ if __name__ == "__main__":
                 print(f"Removing Past Experiences: {folder}")
                 shutil.rmtree(folder)
 
-        p_train = subprocess.Popen(['python', 'train.py'])
+        p_train = subprocess.Popen(['python', 'train.py', f'--run_name={args.run_name}'])
         p_train.wait()
         print("Training Completed")
 
@@ -65,8 +70,8 @@ if __name__ == "__main__":
 
             sleep(DOCKER_WAIT_TIME)
 
-            p_a = subprocess.Popen(['python', 'agent.py', '--id=a', '--eval=True', f'--ep={i}'], stdout=DEVNULL, stderr=DEVNULL)
-            p_b = subprocess.Popen(['python', 'agent.py', '--id=b', '--eval=True'])
+            p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', '--eval=True', f'--ep={i}'], stdout=DEVNULL, stderr=DEVNULL)
+            p_b = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', '--eval=True'])
 
             [p.wait() for p in (p_docker, p_a, p_b)]
             print("Evaluation Completed")

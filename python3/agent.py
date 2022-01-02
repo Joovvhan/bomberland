@@ -54,8 +54,6 @@ def visualize_entities(entities):
     
 #     return np.array(board)
     
-
-
 uri = None
 agent_id = None
 
@@ -95,6 +93,103 @@ class Agent():
         else:
             return None
 
+    def get_action_mask(self, unit_state, board):
+
+        # "coordinates": [
+        # 4,
+        # 10
+        # ],
+        # "hp": 3,
+        # "inventory": {
+        #     "bombs": 3
+        # },
+        # "blast_diameter": 3,
+        # "unit_id": "c",
+        # "agent_id": "a",
+        # "invulnerability": 0
+
+        mask = np.array([1, 1, 1, 1, 1, 1])
+
+        if unit_state["hp"] <= 0:
+            return mask
+
+        unit_id = unit_state["unit_id"]
+        unit_x, unit_y = unit_state["coordinates"]
+
+        # No bomb to detonate
+        if self._get_bomb_to_detonate(unit_id) is None:
+            mask[5] = 0
+
+        # No bomb to place
+        if unit_state["inventory"]["bombs"] <= 0:
+            mask[4] = 0
+
+        def check_invalid_index(x, y, board):
+            try:
+                board[:, x, y]
+                return True
+            except IndexError:
+                return False
+
+        # x: Blast (3)
+        # m: Metal Block (5)
+        # o: Ore Block (6)
+        # w: Wooden Block (7)
+        # unit: unit (8)
+        # hp: HP (9)
+
+        def check_wall(x, y, board):
+            if np.argmax(board[:, x, y]) in (5, 6, 7):
+                return True
+            if board[8, x, y] != 0 and board[9, x, y] <= 0:
+                return True
+            
+            return False
+        
+        def check_flame(x, y, board):
+            if np.argmax(board[:, x, y]) == 3:
+                return True
+            return False
+
+        # actions = ["up", "down", "left", "right", "bomb", "detonate"]
+
+        if unit_state["invulnerability"] - self.step <= 1:
+            # up
+            if not check_invalid_index(unit_x, unit_y+1, board) or check_flame(unit_x, unit_y+1, board):
+                mask[0] = 0
+
+            # down
+            if not check_invalid_index(unit_x, unit_y-1, board) or check_flame(unit_x, unit_y-1, board):
+                mask[1] = 0
+
+            # left
+            if not check_invalid_index(unit_x-1, unit_y, board) or check_flame(unit_x-1, unit_y, board):
+                mask[2] = 0
+
+            # right
+            if not check_invalid_index(unit_x+1, unit_y, board) or check_flame(unit_x+1, unit_y, board):
+                mask[3] = 0
+
+        movement_mask = np.array([1, 1, 1, 1, 1, 1])
+
+        # up
+        if not check_invalid_index(unit_x, unit_y+1, board) or check_wall(unit_x, unit_y+1, board):
+            movement_mask[0] = 0
+
+        # down
+        if not check_invalid_index(unit_x, unit_y-1, board) or check_wall(unit_x, unit_y-1, board):
+            movement_mask[1] = 0
+
+        # left
+        if not check_invalid_index(unit_x-1, unit_y, board) or check_wall(unit_x-1, unit_y, board):
+            movement_mask[2] = 0
+
+        # right
+        if not check_invalid_index(unit_x+1, unit_y, board) or check_wall(unit_x+1, unit_y, board):
+            movement_mask[3] = 0
+
+        return mask * movement_mask, mask
+
     async def _on_game_tick(self, tick_number, game_state):
 
         # get my units
@@ -120,14 +215,28 @@ class Agent():
                 u_board[TYPE2CODE['p'], s['coordinates'][0], s['coordinates'][1]] = 1
                 observation = np.expand_dims(u_board, axis=0)
 
-                action, log_prob = MODEL.select_action(observation)
+                # action, log_prob = MODEL.select_action(observation)
+                prob = MODEL.select_action_probs(observation)
                 # print(action, log_prob)
+
+                mask, lethal_mask = self.get_action_mask(s, board)
+                prob = mask * prob
+
+                if np.sum(prob) == 0:
+                    # prob = np.array([1, 1, 1, 1, 0, 0])
+                    prob = lethal_mask ^ 1
+                    prob = prob / np.sum(prob)
+                else:
+                    prob = prob / np.sum(prob)
+
             else:
                 prob = np.random.random(len(actions))
                 prob = prob / np.sum(prob)
 
-                action = np.random.choice(range(len(actions)), p=prob)
-                log_prob = np.log(prob[action])
+            # Do action probability masking here
+
+            action = np.random.choice(range(len(actions)), p=prob)
+            log_prob = float(np.log(prob[action]))
 
             decisions[unit_id].update({'action': actions[action]})
             decisions[unit_id].update({'log_prob': log_prob})
@@ -188,6 +297,7 @@ if __name__ == "__main__":
     parser.add_argument('--port', type=int, help='Port', default=3000)
     parser.add_argument('--eval', type=bool, help='Evaluation', default=False)
     parser.add_argument('--save', type=bool, help='Save trajectory', default=False)
+    parser.add_argument('--run_name', type=str, help='Run name', default='exp')
     args = parser.parse_args()
 
     agent_id = args.id
@@ -216,7 +326,7 @@ if __name__ == "__main__":
         MODEL = None
     
     else:
-        run_name = 'exp'
+        run_name = args.run_name
 
         ppo_agent = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name)
 
