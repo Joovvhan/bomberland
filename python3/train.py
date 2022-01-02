@@ -56,7 +56,7 @@ def train(args):
     ################ PPO hyperparameters ################
 
     update_timestep = max_ep_len * 4      # update policy every n timesteps
-    K_epochs = 80               # update policy for K epochs in one PPO update
+    K_epochs = args.k_epochs              # update policy for K epochs in one PPO update
 
     eps_clip = 0.2          # clip parameter for PPO
     # gamma = 0.99            # discount factor
@@ -345,6 +345,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_name', type=str, help='run_name', default='exp')
+    parser.add_argument('--k_epochs', type=int, help='k_epochs', default=80)
     args = parser.parse_args()
 
     train(args)

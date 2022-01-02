@@ -18,6 +18,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_name', type=str, help='run name', default='exp')
+    parser.add_argument('--k_epochs', type=int, help='k_epochs', default=10)
     args = parser.parse_args()
 
     old_json_files = glob('./trajectory/*.json')
@@ -59,7 +60,7 @@ if __name__ == "__main__":
                 print(f"Removing Past Experiences: {folder}")
                 shutil.rmtree(folder)
 
-        p_train = subprocess.Popen(['python', 'train.py', f'--run_name={args.run_name}'])
+        p_train = subprocess.Popen(['python', 'train.py', f'--run_name={args.run_name}', f'--k_epochs={args.k_epochs}'])
         p_train.wait()
         print("Training Completed")
 
