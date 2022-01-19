@@ -62,7 +62,7 @@ if __name__ == "__main__":
     parser.add_argument('--id', type=str, help='Agent ID', default=None)
     parser.add_argument('--ep', type=int, help='Episodes', default=0)
     parser.add_argument('--port', type=int, help='Port', default=3000)
-    parser.add_argument('--eval', type=bool, help='Evaluation', default=False)
+    parser.add_argument('--log', type=bool, help='Log', default=False)
     parser.add_argument('--save', type=bool, help='Save trajectory', default=False)
     parser.add_argument('--run_name', type=str, help='Run name', default='exp')
     args = parser.parse_args()
@@ -72,8 +72,6 @@ if __name__ == "__main__":
     if args.id is None:
         uri = os.environ.get('GAME_CONNECTION_STRING')
     elif args.id == 'a':
-        shutil.rmtree('./trajectory')
-        os.mkdir('./trajectory')
         uri = f"ws://127.0.0.1:{args.port}/?role=agent&agentId=agentA&name=defaultName"
     elif args.id == 'b':
         uri = f"ws://127.0.0.1:{args.port}/?role=agent&agentId=agentB&name=defaultName"
@@ -82,3 +80,8 @@ if __name__ == "__main__":
 
     steps = main()
     
+    if args.log:
+        run_name = args.run_name
+        writer = SummaryWriter(f'runs/{run_name}')
+        writer.add_scalar('episode_len/eval/static', steps, args.ep)
+        writer.flush()

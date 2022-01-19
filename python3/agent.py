@@ -295,7 +295,7 @@ if __name__ == "__main__":
     parser.add_argument('--id', type=str, help='Agent ID', default=None)
     parser.add_argument('--ep', type=int, help='Episodes', default=0)
     parser.add_argument('--port', type=int, help='Port', default=3000)
-    parser.add_argument('--eval', type=bool, help='Evaluation', default=False)
+    parser.add_argument('--log', type=bool, help='Log', default=False)
     parser.add_argument('--save', type=bool, help='Save trajectory', default=False)
     parser.add_argument('--run_name', type=str, help='Run name', default='exp')
     args = parser.parse_args()
@@ -321,41 +321,31 @@ if __name__ == "__main__":
 
     SAVE = args.save
 
-    if args.id == 'b' and args.eval:
+    run_name = args.run_name
 
-        MODEL = None
-    
+    ppo_agent = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name)
+
+    ppo_agent.policy.eval()
+    ppo_agent.policy_old.eval()
+
+    directory = "PPO_preTrained"
+    directory = directory + '/' + run_name + '/'
+
+    past_checkpoints = sorted(glob(directory + "*.pth"))
+    if len(past_checkpoints) > 0:
+        last_checkpoint = past_checkpoints[-1]
+        print("Loding Checkpoint: " + last_checkpoint)
+        ppo_agent.load(last_checkpoint)
     else:
-        run_name = args.run_name
-
-        ppo_agent = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name)
-
-        ppo_agent.policy.eval()
-        ppo_agent.policy_old.eval()
-
-        directory = "PPO_preTrained"
-        directory = directory + '/' + run_name + '/'
-
-        past_checkpoints = sorted(glob(directory + "*.pth"))
-        if len(past_checkpoints) > 0:
-            last_checkpoint = past_checkpoints[-1]
-
-            print("Loding Checkpoint: " + last_checkpoint)
-            ppo_agent.load(last_checkpoint)
-        else:
-            print("No Checkpoint Found")
-            
-        MODEL = ppo_agent
-
-
+        print("No Checkpoint Found")
+        
+    MODEL = ppo_agent
 
     steps = main()
 
-    if args.id == 'a':
+    if args.log:
         writer = SummaryWriter(f'runs/{run_name}')
-        if not args.eval:
-            writer.add_scalar('episode_len', steps, args.ep)
-        else:
-            writer.add_scalar('episode_len/eval', steps, args.ep)
+        writer.add_scalar('episode_len', steps, args.ep)
+        writer.flush()
 
     

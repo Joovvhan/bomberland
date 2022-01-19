@@ -216,7 +216,7 @@ if __name__ == "__main__":
     parser.add_argument('--id', type=str, help='Agent ID', default=None)
     parser.add_argument('--ep', type=int, help='Episodes', default=0)
     parser.add_argument('--port', type=int, help='Port', default=3000)
-    parser.add_argument('--eval', type=bool, help='Evaluation', default=False)
+    parser.add_argument('--log', type=bool, help='Log', default=False)
     parser.add_argument('--save', type=bool, help='Save trajectory', default=False)
     parser.add_argument('--run_name', type=str, help='Run name', default='exp')
     args = parser.parse_args()
@@ -235,4 +235,9 @@ if __name__ == "__main__":
         assert f'Invalid agent ID {args.id}'
 
     steps = main()
-    
+
+    if args.log:
+        run_name = args.run_name
+        writer = SummaryWriter(f'runs/{run_name}')
+        writer.add_scalar('episode_len/eval/smart_safe', steps, args.ep)
+        writer.flush()
