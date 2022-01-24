@@ -194,9 +194,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir', type=str)
+    parser.add_argument('--code', type=str)
     args = parser.parse_args()
 
-    json_files = sorted(glob('./trajectory/*.json'))
+    json_files = sorted(glob(f'./trajectory/{args.code}/*.json'))
     match_len = len(json_files) // 4
     status_list = [json_files[4*i:4*i+4] for i in range(match_len)]
 
@@ -306,7 +307,7 @@ if __name__ == "__main__":
 
         observation, q_vector, r_vector, logp_vector = duplicate_observation(observation, q_vector, r_vector, logp_vector)
 
-        np.savez(f'./obs/{args.dir}/{i:03d}_obs.npz',
+        np.savez(f'./obs/{args.dir}/{args.code}_{i:03d}_obs.npz',
             observation=observation, 
             q_vector=q_vector, 
             r_vector=r_vector,

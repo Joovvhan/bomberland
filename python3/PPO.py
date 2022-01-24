@@ -38,20 +38,20 @@ class BomberDataset(Dataset):
 
 ################################## set device ##################################
 
-print("============================================================================================")
+# print("============================================================================================")
 
 
 # set device to cpu or cuda
 device = torch.device('cpu')
 
-if(torch.cuda.is_available()): 
-    device = torch.device('cuda:0') 
-    torch.cuda.empty_cache()
-    print("Device set to : " + str(torch.cuda.get_device_name(device)))
-else:
-    print("Device set to : cpu")
+# if(torch.cuda.is_available()): 
+#     device = torch.device('cuda:0') 
+#     torch.cuda.empty_cache()
+#     print("Device set to : " + str(torch.cuda.get_device_name(device)))
+# else:
+#     print("Device set to : cpu")
     
-print("============================================================================================")
+# print("============================================================================================")
 
 
 
@@ -226,7 +226,7 @@ class PPO:
     # def __init__(self, state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std_init=0.6):
     # def __init__(self, feature_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space=False, action_std_init=0.6):
     def __init__(self, feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name,
-        has_continuous_action_space=False, action_std_init=0.6):
+        has_continuous_action_space=False, action_std_init=0.6, infer=False):
 
         self.has_continuous_action_space = has_continuous_action_space
 

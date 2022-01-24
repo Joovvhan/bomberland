@@ -12,7 +12,7 @@ LOOP_NUM = 300
 DOCKER_WAIT_TIME = 5
 KEEP_OBS = 10
 
-EVALUATION_TERM = 1
+EVALUATION_TERM = 10
 
 if __name__ == "__main__":
 
@@ -36,18 +36,40 @@ if __name__ == "__main__":
         for file in old_json_files:
             os.remove(file)
 
-        p_docker = subprocess.Popen(['bash', '../server-run.sh'])
-
+        # p_docker = subprocess.Popen(['bash', '../server-run.sh'])
+        p_docker = subprocess.Popen(['bash', '../server-run-2.sh'])
         sleep(DOCKER_WAIT_TIME)
 
-        p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True'], stdout=DEVNULL, stderr=DEVNULL)
-        p_b = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True'])
+        p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=x'],
+                                stdout=DEVNULL, stderr=DEVNULL)
+        p_b = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', f'--ep={i}', '--code=x'])
 
-        [p.wait() for p in (p_docker, p_a, p_b)]
+        p_a_y = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=y', '--port=3001'], 
+                                 stdout=DEVNULL, stderr=DEVNULL)
+        p_b_y = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', '--log=False', f'--ep={i}', '--code=y', '--port=3001'])
+
+        p_a_z = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=z', '--port=3002'], 
+                                 stdout=DEVNULL, stderr=DEVNULL)
+        p_b_z = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', '--log=False', f'--ep={i}', '--code=z', '--port=3002'])
+
+        p_a_w = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=w', '--port=3003'], 
+                                 stdout=DEVNULL, stderr=DEVNULL)
+        p_b_w = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', '--log=False', f'--ep={i}', '--code=w', '--port=3003'])       
+
+
+        [p.wait() for p in (p_docker, p_a, p_b, p_a_y, p_b_y)]
+        # [p.wait() for p in (p_docker, p_a, p_b)]
         print("Episode Completed")
 
-        p_batch = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}'])
-        p_batch.wait()
+        p_batch_a = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=x'])
+        p_batch_b = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=y'])
+        p_batch_c = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=z'])
+        p_batch_d = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=w'])
+        
+        p_batch_a.wait()
+        p_batch_b.wait()
+        p_batch_c.wait()
+        p_batch_d.wait()
         print("Building Observation Completed")
 
         # old_npz_files = glob('./obs/*.npz')

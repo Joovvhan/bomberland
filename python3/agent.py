@@ -17,6 +17,7 @@ from json2npy import observe_entities, observe_units, observe_empty, TYPE2CODE
 MODEL = None
 
 SAVE = False
+CODE = None
 
 # a: ammunition
 # b: Bomb
@@ -262,16 +263,16 @@ class Agent():
 
             # np.save(f'trajectory/{self.step:03d}_obs.npy', observe_entities(entities))
 
-            with open(f'trajectory/{self.step:03d}_entities.json', 'w') as f:
+            with open(f'trajectory/{CODE}/{self.step:03d}_entities.json', 'w') as f:
                 entities_json = json.dumps(entities, indent=4) 
                 f.write(entities_json)
 
-            with open(f'trajectory/{self.step:03d}_action_a.json', 'w') as f:
+            with open(f'trajectory/{CODE}/{self.step:03d}_action_a.json', 'w') as f:
                 decisions_json = json.dumps(decisions, indent=4) 
                 f.write(decisions_json)
 
             # unit_state = game_state.get("unit_state")
-            with open(f'trajectory/{self.step:03d}_status.json', 'w') as f:
+            with open(f'trajectory/{CODE}/{self.step:03d}_status.json', 'w') as f:
                 unit_state_json = json.dumps(unit_state, indent=4) 
                 f.write(unit_state_json)
 
@@ -279,7 +280,7 @@ class Agent():
             #     print(unit, unit_state[unit])
         
         elif agent_id == 'b':
-            with open(f'trajectory/{self.step:03d}_action_b.json', 'w') as f:
+            with open(f'trajectory/{CODE}/{self.step:03d}_action_b.json', 'w') as f:
                 decisions_json = json.dumps(decisions, indent=4) 
                 f.write(decisions_json)
 
@@ -298,6 +299,7 @@ if __name__ == "__main__":
     parser.add_argument('--log', type=bool, help='Log', default=False)
     parser.add_argument('--save', type=bool, help='Save trajectory', default=False)
     parser.add_argument('--run_name', type=str, help='Run name', default='exp')
+    parser.add_argument('--code', type=str, help='Multiple match code', default='x')
     args = parser.parse_args()
 
     agent_id = args.id
@@ -305,8 +307,11 @@ if __name__ == "__main__":
     if args.id is None:
         uri = os.environ.get('GAME_CONNECTION_STRING')
     elif args.id == 'a':
-        shutil.rmtree('./trajectory')
-        os.mkdir('./trajectory')
+        if not os.path.isdir('./trajectory'):
+            os.makedirs('./trajectory', exist_ok=True)
+        if os.path.isdir(f'./trajectory/{args.code}'):
+            shutil.rmtree(f'./trajectory/{args.code}')
+            os.mkdir(f'./trajectory/{args.code}')
         uri = f"ws://127.0.0.1:{args.port}/?role=agent&agentId=agentA&name=defaultName"
     elif args.id == 'b':
         uri = f"ws://127.0.0.1:{args.port}/?role=agent&agentId=agentB&name=defaultName"
@@ -321,9 +326,11 @@ if __name__ == "__main__":
 
     SAVE = args.save
 
+    CODE = args.code
+
     run_name = args.run_name
 
-    ppo_agent = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name)
+    ppo_agent = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name, infer=True)
 
     ppo_agent.policy.eval()
     ppo_agent.policy_old.eval()
