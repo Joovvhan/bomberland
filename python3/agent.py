@@ -305,12 +305,14 @@ if __name__ == "__main__":
 
     agent_id = args.id
 
+    SAVE = args.save
+
     if args.id is None:
         uri = os.environ.get('GAME_CONNECTION_STRING')
     elif args.id == 'a':
         if not os.path.isdir('./trajectory'):
             os.makedirs('./trajectory', exist_ok=True)
-        if os.path.isdir(f'./trajectory/{args.code}'):
+        if os.path.isdir(f'./trajectory/{args.code}') and SAVE:
             shutil.rmtree(f'./trajectory/{args.code}')
             os.mkdir(f'./trajectory/{args.code}')
         uri = f"ws://127.0.0.1:{args.port}/?role=agent&agentId=agentA&name=defaultName"
@@ -324,8 +326,6 @@ if __name__ == "__main__":
     lr_critic = 0.001
     K_epochs = 80
     eps_clip = 0.2         
-
-    SAVE = args.save
 
     CODE = args.code
 

@@ -46,19 +46,20 @@ if __name__ == "__main__":
 
         p_a_y = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=y', '--port=3001'], 
                                  stdout=DEVNULL, stderr=DEVNULL)
-        p_b_y = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', '--log=False', f'--ep={i}', '--code=y', '--port=3001'])
+        p_b_y = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', f'--ep={i}', '--code=y', '--port=3001'])
 
         p_a_z = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=z', '--port=3002'], 
                                  stdout=DEVNULL, stderr=DEVNULL)
-        p_b_z = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', '--log=False', f'--ep={i}', '--code=z', '--port=3002'])
+        p_b_z = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', f'--ep={i}', '--code=z', '--port=3002'])
 
         p_a_w = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=w', '--port=3003'], 
                                  stdout=DEVNULL, stderr=DEVNULL)
-        p_b_w = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', '--log=False', f'--ep={i}', '--code=w', '--port=3003'])       
+        p_b_w = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', f'--ep={i}', '--code=w', '--port=3003'])       
 
 
-        [p.wait() for p in (p_docker, p_a, p_b, p_a_y, p_b_y)]
+        # [p.wait() for p in (p_docker, p_a, p_b, p_a_y, p_b_y)]
         # [p.wait() for p in (p_docker, p_a, p_b)]
+        p_docker.wait()
         print("Episode Completed")
 
         p_batch_a = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=x'])
@@ -87,25 +88,30 @@ if __name__ == "__main__":
         print("Training Completed")
 
 
-        if (i % EVALUATION_TERM) == 0 and i != 0:
-
-            print("Static Evaluation Started")
-            p_docker = subprocess.Popen(['bash', '../server-run.sh'], stdout=DEVNULL, stderr=DEVNULL)
+        # if (i % EVALUATION_TERM) == 0 and i != 0:
+        if (i % EVALUATION_TERM) == 0:
+            print("Evaluation Started")
+            p_docker = subprocess.Popen(['bash', '../server-run-3.sh'], stdout=DEVNULL, stderr=DEVNULL)
+            # print("Static Evaluation Started")
+            # p_docker = subprocess.Popen(['bash', '../server-run.sh'], stdout=DEVNULL, stderr=DEVNULL)
             sleep(DOCKER_WAIT_TIME)
             p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}'], stdout=DEVNULL, stderr=DEVNULL)
             # p_b = subprocess.Popen(['python', 'static_agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', f'--ep={i}'], stdout=DEVNULL, stderr=DEVNULL)
             p_b = subprocess.Popen(['python', 'static_agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', f'--ep={i}'])
-            [p.wait() for p in (p_docker, p_a, p_b)]
-            print("Static Evaluation Completed")
+            # [p.wait() for p in (p_docker, p_a, p_b)]
+            # print("Static Evaluation Completed")
 
-            print("Smart Safe Evaluation Started")
-            p_docker = subprocess.Popen(['bash', '../server-run.sh'], stdout=DEVNULL, stderr=DEVNULL)
-            sleep(DOCKER_WAIT_TIME)
-            p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}'], stdout=DEVNULL, stderr=DEVNULL)
+            # print("Smart Safe Evaluation Started")
+            # p_docker = subprocess.Popen(['bash', '../server-run.sh'], stdout=DEVNULL, stderr=DEVNULL)
+            # sleep(DOCKER_WAIT_TIME)
+            p_a_ = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', '--port=3001']) #, stdout=DEVNULL, stderr=DEVNULL)
             # p_b = subprocess.Popen(['python', 'smart_safe_agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', f'--ep={i}'], stdout=DEVNULL, stderr=DEVNULL)
-            p_b = subprocess.Popen(['python', 'smart_safe_agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', f'--ep={i}'])
-            [p.wait() for p in (p_docker, p_a, p_b)]
-            print("Smart Safe Evaluation Completed")
+            p_b_ = subprocess.Popen(['python', 'smart_safe_agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', f'--ep={i}', '--port=3001'])
+            # [p.wait() for p in (p_docker, p_a, p_b)]
+            # print("Smart Safe Evaluation Completed")
+
+            p_docker.wait()
+            print("Evaluation Completed")
 
         # p_docker = subprocess.Popen(['bash', '../server-run-2.sh'])
         # sleep(DOCKER_WAIT_TIME)
