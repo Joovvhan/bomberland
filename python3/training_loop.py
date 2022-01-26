@@ -87,7 +87,7 @@ if __name__ == "__main__":
         print("Training Completed")
 
 
-        if (i % EVALUATION_TERM) == 0:
+        if (i % EVALUATION_TERM) == 0 and i != 0:
 
             print("Static Evaluation Started")
             p_docker = subprocess.Popen(['bash', '../server-run.sh'], stdout=DEVNULL, stderr=DEVNULL)

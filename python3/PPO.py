@@ -19,7 +19,9 @@ ACTION_SPACE_SIZE = 6
 OBS_DIM = 11
 MAP_SIZE = 15
 
-BATCH_SIZE = 2048
+# BATCH_SIZE = 2048
+# BATCH_SIZE = 4096
+BATCH_SIZE = 8192
 
 
 class BomberDataset(Dataset):
@@ -42,10 +44,10 @@ class BomberDataset(Dataset):
 
 
 # set device to cpu or cuda
-device = torch.device('cpu')
+# device = torch.device('cpu')
 
-# if(torch.cuda.is_available()): 
-#     device = torch.device('cuda:0') 
+# # if(torch.cuda.is_available()): 
+# #     device = torch.device('cuda:0') 
 #     torch.cuda.empty_cache()
 #     print("Device set to : " + str(torch.cuda.get_device_name(device)))
 # else:
@@ -97,14 +99,16 @@ class RolloutBuffer:
 
 class ActorCritic(nn.Module):
     # def __init__(self, state_dim, action_dim, has_continuous_action_space=False, action_std_init=None):
-    def __init__(self, feature_dim=16, p=0.3, has_continuous_action_space=False, action_std_init=None):
+    def __init__(self, feature_dim=16, p=0.3, has_continuous_action_space=False, action_std_init=None, device=torch.device('cpu')):
         super(ActorCritic, self).__init__()
+
+        self.device = device
 
         self.has_continuous_action_space = has_continuous_action_space
 
         if has_continuous_action_space:
             self.action_dim = ACTION_SPACE_SIZE
-            self.action_var = torch.full((ACTION_SPACE_SIZE,), action_std_init * action_std_init).to(device)
+            self.action_var = torch.full((ACTION_SPACE_SIZE,), action_std_init * action_std_init).to(self.device)
 
         # actor
         if has_continuous_action_space :
@@ -166,7 +170,7 @@ class ActorCritic(nn.Module):
     def set_action_std(self, new_action_std):
 
         if self.has_continuous_action_space:
-            self.action_var = torch.full((self.action_dim,), new_action_std * new_action_std).to(device)
+            self.action_var = torch.full((self.action_dim,), new_action_std * new_action_std).to(self.device)
         else:
             print("--------------------------------------------------------------------------------------------")
             print("WARNING : Calling ActorCritic::set_action_std() on discrete action space policy")
@@ -205,7 +209,7 @@ class ActorCritic(nn.Module):
             action_mean = self.actor(state)
             
             action_var = self.action_var.expand_as(action_mean)
-            cov_mat = torch.diag_embed(action_var).to(device)
+            cov_mat = torch.diag_embed(action_var).to(self.device)
             dist = MultivariateNormal(action_mean, cov_mat)
             
             # For Single Action Environments.
@@ -226,7 +230,7 @@ class PPO:
     # def __init__(self, state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space, action_std_init=0.6):
     # def __init__(self, feature_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, has_continuous_action_space=False, action_std_init=0.6):
     def __init__(self, feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name,
-        has_continuous_action_space=False, action_std_init=0.6, infer=False):
+        has_continuous_action_space=False, action_std_init=0.6, device='cpu', infer=False):
 
         self.has_continuous_action_space = has_continuous_action_space
 
@@ -239,15 +243,23 @@ class PPO:
         
         self.buffer = RolloutBuffer()
 
+        if device == 'cpu':
+            self.device = torch.device('cpu')
+        else:
+            if(torch.cuda.is_available()): 
+                self.device = torch.device('cuda:0')
+            else:
+                self.device = torch.device('cpu')
+ 
         # self.policy = ActorCritic(feature_dim, has_continuous_action_space, action_std_init).to(device)
-        self.policy = ActorCritic(feature_dim).to(device)
+        self.policy = ActorCritic(feature_dim, device=self.device).to(self.device)
         self.optimizer = torch.optim.Adam([
                         {'params': self.policy.actor.parameters(), 'lr': lr_actor},
                         {'params': self.policy.critic.parameters(), 'lr': lr_critic}
                     ])
 
         # self.policy_old = ActorCritic(feature_dim, has_continuous_action_space, action_std_init).to(device)
-        self.policy_old = ActorCritic(feature_dim).to(device)
+        self.policy_old = ActorCritic(feature_dim).to(self.device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
@@ -291,7 +303,7 @@ class PPO:
 
         if self.has_continuous_action_space:
             with torch.no_grad():
-                state = torch.FloatTensor(state).to(device)
+                state = torch.FloatTensor(state).to(self.device)
                 action, action_logprob = self.policy_old.act(state)
 
             # self.buffer.states.append(state)
@@ -315,7 +327,7 @@ class PPO:
     def select_action_probs(self, state):
             
         with torch.no_grad():
-            state = torch.FloatTensor(state).to(device)
+            state = torch.FloatTensor(state).to(self.device)
             action_probs = self.policy_old.act_probs(state)
 
         return action_probs.squeeze().detach().cpu().numpy()
@@ -364,7 +376,7 @@ class PPO:
 
             for states, actions, logprobs, rewards in train_dataloader:
 
-                states, actions, logprobs, rewards = states.to(device), actions.to(device), logprobs.to(device), rewards.to(device)
+                states, actions, logprobs, rewards = states.to(self.device), actions.to(self.device), logprobs.to(self.device), rewards.to(self.device)
 
                 # Evaluating old actions and values
                 logprobs, state_values, dist_entropy = self.policy.evaluate(states, actions)
@@ -426,8 +438,7 @@ class PPO:
 if __name__ == "__main__":
 
 
-    K_epochs = 80           # update policy for K epochs in one PPO update
-
+    K_epochs = 80           # update policy for K epochs in one PPO update\
     eps_clip = 0.2          # clip parameter for PPO
     # gamma = 0.99            # discount factor
 
@@ -440,7 +451,6 @@ if __name__ == "__main__":
 
     ppo = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name)
     
-
     # tensor = torch.rand(4, 11, 15, 15)
     tensor = torch.rand(1, 11, 15, 15)
     # tensor = tensor.to(device)
@@ -451,8 +461,8 @@ if __name__ == "__main__":
     action, log_prob = ppo.select_action(tensor)
     
     action_tensor = torch.tensor(action).reshape([1, 1])
-    tensor = tensor.to(device)
-    action_tensor = action_tensor.to(device)
+    tensor = tensor.to(ppo.device)
+    action_tensor = action_tensor.to(ppo.device)
 
     logprobs, state_values, dist_entropy = ppo.policy.evaluate(tensor, action_tensor)
 

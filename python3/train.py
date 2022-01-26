@@ -204,7 +204,7 @@ def train(args):
     #                 lr_actor, lr_critic, gamma, K_epochs, eps_clip, 
     #                 has_continuous_action_space=False, action_std=None)
 
-    ppo_agent = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name)
+    ppo_agent = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name, device='gpu')
     if last_checkpoint is not None:
         print("load checkpoint path: " + last_checkpoint)
         ppo_agent.load(last_checkpoint)

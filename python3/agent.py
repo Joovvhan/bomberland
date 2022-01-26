@@ -300,6 +300,7 @@ if __name__ == "__main__":
     parser.add_argument('--save', type=bool, help='Save trajectory', default=False)
     parser.add_argument('--run_name', type=str, help='Run name', default='exp')
     parser.add_argument('--code', type=str, help='Multiple match code', default='x')
+    parser.add_argument('--device', type=str, help='Inferene device', default='cpu')
     args = parser.parse_args()
 
     agent_id = args.id
@@ -330,7 +331,7 @@ if __name__ == "__main__":
 
     run_name = args.run_name
 
-    ppo_agent = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name, infer=True)
+    ppo_agent = PPO(feature_dim, lr_actor, lr_critic, K_epochs, eps_clip, run_name=run_name, device=args.device, infer=True)
 
     ppo_agent.policy.eval()
     ppo_agent.policy_old.eval()
