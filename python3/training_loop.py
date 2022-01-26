@@ -8,11 +8,14 @@ import os
 import shutil
 import argparse
 
+from tensorboardX import SummaryWriter
+
 LOOP_NUM = 300
 DOCKER_WAIT_TIME = 5
 KEEP_OBS = 10
 
 EVALUATION_TERM = 10
+# EVALUATION_TERM = 1
 
 if __name__ == "__main__":
 
@@ -97,7 +100,7 @@ if __name__ == "__main__":
             sleep(DOCKER_WAIT_TIME)
             p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}'], stdout=DEVNULL, stderr=DEVNULL)
             # p_b = subprocess.Popen(['python', 'static_agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', f'--ep={i}'], stdout=DEVNULL, stderr=DEVNULL)
-            p_b = subprocess.Popen(['python', 'static_agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', f'--ep={i}'])
+            p_b = subprocess.Popen(['python', 'static_agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', f'--ep={i}'], stdout=subprocess.PIPE, stderr=DEVNULL)
             # [p.wait() for p in (p_docker, p_a, p_b)]
             # print("Static Evaluation Completed")
 
@@ -106,12 +109,21 @@ if __name__ == "__main__":
             # sleep(DOCKER_WAIT_TIME)
             p_a_ = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', '--port=3001']) #, stdout=DEVNULL, stderr=DEVNULL)
             # p_b = subprocess.Popen(['python', 'smart_safe_agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', f'--ep={i}'], stdout=DEVNULL, stderr=DEVNULL)
-            p_b_ = subprocess.Popen(['python', 'smart_safe_agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', f'--ep={i}', '--port=3001'])
+            p_b_ = subprocess.Popen(['python', 'smart_safe_agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', f'--ep={i}', '--port=3001'], stdout=subprocess.PIPE, stderr=DEVNULL)
             # [p.wait() for p in (p_docker, p_a, p_b)]
             # print("Smart Safe Evaluation Completed")
 
             p_docker.wait()
             print("Evaluation Completed")
+
+            static_result = 1 if p_b.stdout.readlines()[0].strip().decode('utf-8')[-1] == 'a' else 0
+            smart_result = 1 if p_b_.stdout.readlines()[0].strip().decode('utf-8')[-1] == 'a' else 0
+
+            writer = SummaryWriter(f'runs/{args.run_name}')
+            writer.add_scalar('win/eval/smart_safe', smart_result, i)
+            writer.add_scalar('win/eval/static', static_result, i)
+            writer.flush()
+            writer.close()
 
         # p_docker = subprocess.Popen(['bash', '../server-run-2.sh'])
         # sleep(DOCKER_WAIT_TIME)
