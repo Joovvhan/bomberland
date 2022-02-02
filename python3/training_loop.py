@@ -12,7 +12,8 @@ from tensorboardX import SummaryWriter
 
 LOOP_NUM = 300
 DOCKER_WAIT_TIME = 5
-KEEP_OBS = 10
+# KEEP_OBS = 10
+KEEP_OBS = 5
 
 EVALUATION_TERM = 10
 # EVALUATION_TERM = 1
@@ -65,15 +66,19 @@ if __name__ == "__main__":
         p_docker.wait()
         print("Episode Completed")
 
-        p_batch_a = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=x'])
-        p_batch_b = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=y'])
-        p_batch_c = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=z'])
-        p_batch_d = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=w'])
+        p_batch = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--codes=w x y z', f'--run_name={args.run_name}', '--log=True', f'--ep={i}'])
+        # p_batch_a = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=x'])
+        # p_batch_b = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=y'])
+        # p_batch_c = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=z'])
+        # p_batch_d = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=w'])
         
-        p_batch_a.wait()
-        p_batch_b.wait()
-        p_batch_c.wait()
-        p_batch_d.wait()
+        # p_batch_a.wait()
+        # p_batch_b.wait()
+        # p_batch_c.wait()
+        # p_batch_d.wait()
+
+        p_batch.wait()
+
         print("Building Observation Completed")
 
         # old_npz_files = glob('./obs/*.npz')
@@ -91,8 +96,8 @@ if __name__ == "__main__":
         print("Training Completed")
 
 
-        # if (i % EVALUATION_TERM) == 0 and i != 0:
-        if (i % EVALUATION_TERM) == 0:
+        if (i % EVALUATION_TERM) == 0 and i != 0:
+        # if (i % EVALUATION_TERM) == 0:
             print("Evaluation Started")
             p_docker = subprocess.Popen(['bash', '../server-run-3.sh'], stdout=DEVNULL, stderr=DEVNULL)
             # print("Static Evaluation Started")

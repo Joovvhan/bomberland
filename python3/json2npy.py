@@ -5,6 +5,8 @@ from tqdm.auto import tqdm
 import argparse
 import os
 
+from tensorboardX import SummaryWriter
+
 # np.set_printoptions(precision=2)
 
 TYPE2CODE = {
@@ -194,143 +196,165 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir', type=str)
-    parser.add_argument('--code', type=str)
+    # parser.add_argument('--code', type=str)
+    parser.add_argument('--codes', type=str)
+    parser.add_argument('--run_name', type=str, help='Run name', default=None)
+    parser.add_argument('--ep', type=int, help='Episodes', default=0)
+    parser.add_argument('--log', type=bool, help='Log', default=False)
     args = parser.parse_args()
 
-    json_files = sorted(glob(f'./trajectory/{args.code}/*.json'))
-    match_len = len(json_files) // 4
-    status_list = [json_files[4*i:4*i+4] for i in range(match_len)]
+    bomb_count = 0
+    flame_count = 0
 
     # for i, (status_file, next_status) in tqdm(enumerate(zip(status_list[:-1], status_list[1:]))):
 
-    last_rewards = dict({
-        'c': 0.0,
-        'd': 0.0,
-        'e': 0.0,
-        'f': 0.0,
-        'g': 0.0,
-        'h': 0.0,
-    })
+    print(args.codes)
 
-    for i in tqdm(reversed(range(len(status_list) - 1))):
+    for code in args.codes.split():
 
-        # print('Before:', last_rewards)
+        # json_files = sorted(glob(f'./trajectory/{args.code}/*.json'))
+        json_files = sorted(glob(f'./trajectory/{code}/*.json'))
+        match_len = len(json_files) // 4
+        status_list = [json_files[4*i:4*i+4] for i in range(match_len)]
 
-        status_file, next_status = status_list[i], status_list[i+1]
+        last_rewards = dict({
+            'c': 0.0,
+            'd': 0.0,
+            'e': 0.0,
+            'f': 0.0,
+            'g': 0.0,
+            'h': 0.0,
+        })
 
-        # print(i, status_file, next_status)
+        print(code, len(json_files))
 
-        action_a_json = status_file[0]
-        action_b_json = status_file[1]
-        entities_json = status_file[2]
-        status_json = status_file[3]
+        for i in tqdm(reversed(range(len(status_list) - 1))):
 
-        with open(entities_json, 'r') as f:
-            entities = json.load(f)
-            board = observe_entities(entities)
-            # visualize_entities(entities)
+            # print('Before:', last_rewards)
 
-        with open(status_json, 'r') as f:
-            status = json.load(f)
-            # print(status)
-            board, live_units = observe_units(board, status)
+            status_file, next_status = status_list[i], status_list[i+1]
 
-        board = observe_empty(board)
+            # print(i, status_file, next_status)
 
-        # id_list, q_list, coord_list, team_list = list(), list(), list(), list()
-        id_list, q_list, coord_list, team_list = dict(), list(), list(), list()
-        logp_list = list()
-            
-        with open(action_a_json, 'r') as f:
-            actions = json.load(f)
-            for uid in actions:
-                if uid in live_units:
-                    # id_list.append(uid)
-                    id_list[uid] = len(id_list)
-                    q_list.append(ACTION2CODE[actions[uid]['action']])
-                    logp_list.append(actions[uid]['log_prob'])
-                    coord_list.append(np.array(status[uid]["coordinates"]))
-                    team_list.append(TEAM2CODE[status[uid]["agent_id"]])
+            action_a_json = status_file[0]
+            action_b_json = status_file[1]
+            entities_json = status_file[2]
+            status_json = status_file[3]
 
-        with open(action_b_json, 'r') as f:
-            actions = json.load(f)
-            for uid in actions:
-                if uid in live_units:
-                    # id_list.append(uid)
-                    id_list[uid] = len(id_list)
-                    q_list.append(ACTION2CODE[actions[uid]['action']])
-                    logp_list.append(actions[uid]['log_prob'])
-                    coord_list.append(np.array(status[uid]["coordinates"]))
-                    team_list.append(TEAM2CODE[status[uid]["agent_id"]])
+            with open(entities_json, 'r') as f:
+                entities = json.load(f)
+                board = observe_entities(entities)
+                # visualize_entities(entities)
 
-        q_vector = np.array(q_list)
-        logp_vector = np.array(logp_list)
+            with open(status_json, 'r') as f:
+                status = json.load(f)
+                # print(status)
+                board, live_units = observe_units(board, status)
 
-        observation = np.zeros((0, *board.shape))
+            board = observe_empty(board)
 
-        for coord, team in zip(coord_list, team_list):
-            u_board = np.copy(board)
-            u_board[TYPE2CODE['unit'], :, :] = team * u_board[TYPE2CODE['unit'], :, :]
-            u_board[TYPE2CODE['p'], coord[0], coord[1]] = 1
-            observation = np.concatenate((observation, np.expand_dims(u_board, axis=0)), axis=0)
+            # id_list, q_list, coord_list, team_list = list(), list(), list(), list()
+            id_list, q_list, coord_list, team_list = dict(), list(), list(), list()
+            logp_list = list()
+                
+            with open(action_a_json, 'r') as f:
+                actions = json.load(f)
+                for uid in actions:
+                    if uid in live_units:
+                        # id_list.append(uid)
+                        id_list[uid] = len(id_list)
+                        q_list.append(ACTION2CODE[actions[uid]['action']])
+                        logp_list.append(actions[uid]['log_prob'])
+                        coord_list.append(np.array(status[uid]["coordinates"]))
+                        team_list.append(TEAM2CODE[status[uid]["agent_id"]])
 
-        r_vector = np.zeros_like(q_vector, dtype=float)
+            with open(action_b_json, 'r') as f:
+                actions = json.load(f)
+                for uid in actions:
+                    if uid in live_units:
+                        # id_list.append(uid)
+                        id_list[uid] = len(id_list)
+                        q_list.append(ACTION2CODE[actions[uid]['action']])
+                        logp_list.append(actions[uid]['log_prob'])
+                        coord_list.append(np.array(status[uid]["coordinates"]))
+                        team_list.append(TEAM2CODE[status[uid]["agent_id"]])
 
-        # if next_status is not None:
-        next_status_json = next_status[3]
-        with open(next_status_json, 'r') as f:
-            next_status = json.load(f)
+            q_vector = np.array(q_list)
+            logp_vector = np.array(logp_list)
 
-        team_life_reward = {'a': 0, 'b': 0}
+            observation = np.zeros((0, *board.shape))
 
-        for uid in live_units:
-            life_r = next_status[uid]['hp'] - live_units[uid]['hp'] 
-            power_r = next_status[uid]['blast_diameter'] - live_units[uid]['blast_diameter'] 
-            team_life_reward[live_units[uid]["agent_id"]] += life_r
-            r_vector[id_list[uid]] += (life_r + power_r)
+            for coord, team in zip(coord_list, team_list):
+                u_board = np.copy(board)
+                u_board[TYPE2CODE['unit'], :, :] = team * u_board[TYPE2CODE['unit'], :, :]
+                u_board[TYPE2CODE['p'], coord[0], coord[1]] = 1
+                observation = np.concatenate((observation, np.expand_dims(u_board, axis=0)), axis=0)
 
-        for uid in live_units:
-            r_vector[id_list[uid]] -= team_life_reward[A2B[live_units[uid]["agent_id"]]]
+            r_vector = np.zeros_like(q_vector, dtype=float)
 
-        for uid in last_rewards:
-            last_rewards[uid] *= GAMMA
+            # if next_status is not None:
+            next_status_json = next_status[3]
+            with open(next_status_json, 'r') as f:
+                next_status = json.load(f)
 
-        for uid in live_units:
-            # print(last_rewards, r_vector)
-            r_vector[id_list[uid]] += last_rewards[uid]
-            last_rewards[uid] = r_vector[id_list[uid]]
+            team_life_reward = {'a': 0, 'b': 0}
 
-        # else:
-        #     pass
+            for uid in live_units:
+                life_r = (next_status[uid]['hp'] - live_units[uid]['hp']) 
+                power_r = (next_status[uid]['blast_diameter'] - live_units[uid]['blast_diameter'])
+                bomb_r = max(next_status[uid]['inventory']['bombs'] - live_units[uid]['inventory']['bombs'], 0) 
+                team_life_reward[live_units[uid]["agent_id"]] += 0.3 * life_r
+                r_vector[id_list[uid]] += (0.9 * life_r + 0.05 * power_r + 0.05 * bomb_r)
+                bomb_count += bomb_r
+                flame_count += power_r
 
-        os.makedirs(f'./obs/{args.dir}', exist_ok=True)
+            for uid in live_units:
+                r_vector[id_list[uid]] -= team_life_reward[A2B[live_units[uid]["agent_id"]]]
 
-        observation, q_vector, r_vector, logp_vector = duplicate_observation(observation, q_vector, r_vector, logp_vector)
+            for uid in last_rewards:
+                last_rewards[uid] *= GAMMA
 
-        np.savez(f'./obs/{args.dir}/{args.code}_{i:03d}_obs.npz',
-            observation=observation, 
-            q_vector=q_vector, 
-            r_vector=r_vector,
-            logp_vector=logp_vector)
+            for uid in live_units:
+                # print(last_rewards, r_vector)
+                r_vector[id_list[uid]] += last_rewards[uid]
+                last_rewards[uid] = r_vector[id_list[uid]]
 
-        # print(observation.shape)
-        # # print(observation)
-        # print(q_vector.shape, q_vector)
-        # print(r_vector.shape, r_vector)
-        # print(logp_vector.shape, logp_vector)
+            # else:
+            #     pass
 
-        # print('After:', last_rewards, r_vector)
-        # print(('{:+0.2f} ' * len(r_vector)).format(*r_vector))
+            os.makedirs(f'./obs/{args.dir}', exist_ok=True)
 
-        # if any(r_vector):
-        #     visualize_board(board)
-        #     for i, (uid, q, coord, team, r) in enumerate(zip(id_list, q_list, coord_list, team_list, r_vector)):
-        #         print(uid, f'{team:+2d}', live_units[uid]['hp'], q, f'{r:+2d}', coord)
-        #         # print(observation[i, -1, :, :])
+            observation, q_vector, r_vector, logp_vector = duplicate_observation(observation, q_vector, r_vector, logp_vector)
 
-        #     print(observation.shape, q_vector.shape, r_vector.shape)
+            np.savez(f'./obs/{args.dir}/{code}_{i:03d}_obs.npz',
+                observation=observation, 
+                q_vector=q_vector, 
+                r_vector=r_vector,
+                logp_vector=logp_vector)
+
+            # print(observation.shape)
+            # # print(observation)
+            # print(q_vector.shape, q_vector)
+            # print(r_vector.shape, r_vector)
+            # print(logp_vector.shape, logp_vector)
+
+            # print('After:', last_rewards, r_vector)
+            # print(('{:+0.2f} ' * len(r_vector)).format(*r_vector))
+
+            # if any(r_vector):
+            #     visualize_board(board)
+            #     for i, (uid, q, coord, team, r) in enumerate(zip(id_list, q_list, coord_list, team_list, r_vector)):
+            #         print(uid, f'{team:+2d}', live_units[uid]['hp'], q, f'{r:+2d}', coord)
+            #         # print(observation[i, -1, :, :])
+
+            #     print(observation.shape, q_vector.shape, r_vector.shape)
+                # break
+
             # break
 
-        # break
-
-
+    if args.log:
+        run_name = args.run_name
+        writer = SummaryWriter(f'runs/{run_name}')
+        writer.add_scalar('pick_up/bomb', bomb_count / (6 * len(args.codes)), args.ep)
+        writer.add_scalar('pick_up/flame', flame_count / (6 * len(args.codes)), args.ep)
+        writer.flush()
