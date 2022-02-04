@@ -208,7 +208,7 @@ if __name__ == "__main__":
 
     # for i, (status_file, next_status) in tqdm(enumerate(zip(status_list[:-1], status_list[1:]))):
 
-    print(args.codes)
+    # print(args.codes)
 
     for code in args.codes.split():
 
@@ -226,7 +226,7 @@ if __name__ == "__main__":
             'h': 0.0,
         })
 
-        print(code, len(json_files))
+        # print(code, len(json_files))
 
         for i in tqdm(reversed(range(len(status_list) - 1))):
 
