@@ -67,7 +67,9 @@ class Agent():
     def __init__(self):
 
         self.step = 0
-        self.team = 1 if agent_id == 'a' else -1
+        # self.team = 1 if agent_id == 'a' else -1
+        self.team = 1 if 'agentA' in uri else -1
+        # print(self.team, uri)
 
         self._client = GameState(uri)
 
