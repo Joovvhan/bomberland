@@ -10,7 +10,7 @@ import shutil
 
 from glob import glob
 from PPO import PPO
-from tensorboardX import SummaryWriter
+# from tensorboardX import SummaryWriter
 
 from json2npy import observe_entities, observe_units, observe_empty, TYPE2CODE
 
@@ -256,33 +256,34 @@ class Agent():
             else:
                 print(f"Unhandled action: {action} for unit {unit_id}")
 
-        if agent_id == 'a' and SAVE:
-            # entities = game_state.get("entities")
-            # visualize_entities(entities)
-            # print(decisions)
+        if SAVE:
+            if agent_id == 'a':
+                # entities = game_state.get("entities")
+                # visualize_entities(entities)
+                # print(decisions)
 
-            # np.save(f'trajectory/{self.step:03d}_obs.npy', observe_entities(entities))
+                # np.save(f'trajectory/{self.step:03d}_obs.npy', observe_entities(entities))
 
-            with open(f'trajectory/{CODE}/{self.step:03d}_entities.json', 'w') as f:
-                entities_json = json.dumps(entities, indent=4) 
-                f.write(entities_json)
+                with open(f'trajectory/{CODE}/{self.step:03d}_entities.json', 'w') as f:
+                    entities_json = json.dumps(entities, indent=4) 
+                    f.write(entities_json)
 
-            with open(f'trajectory/{CODE}/{self.step:03d}_action_a.json', 'w') as f:
-                decisions_json = json.dumps(decisions, indent=4) 
-                f.write(decisions_json)
+                with open(f'trajectory/{CODE}/{self.step:03d}_action_a.json', 'w') as f:
+                    decisions_json = json.dumps(decisions, indent=4) 
+                    f.write(decisions_json)
 
-            # unit_state = game_state.get("unit_state")
-            with open(f'trajectory/{CODE}/{self.step:03d}_status.json', 'w') as f:
-                unit_state_json = json.dumps(unit_state, indent=4) 
-                f.write(unit_state_json)
+                # unit_state = game_state.get("unit_state")
+                with open(f'trajectory/{CODE}/{self.step:03d}_status.json', 'w') as f:
+                    unit_state_json = json.dumps(unit_state, indent=4) 
+                    f.write(unit_state_json)
 
-            # for unit in unit_state:
-            #     print(unit, unit_state[unit])
-        
-        elif agent_id == 'b':
-            with open(f'trajectory/{CODE}/{self.step:03d}_action_b.json', 'w') as f:
-                decisions_json = json.dumps(decisions, indent=4) 
-                f.write(decisions_json)
+                # for unit in unit_state:
+                #     print(unit, unit_state[unit])
+            
+            elif agent_id == 'b':
+                with open(f'trajectory/{CODE}/{self.step:03d}_action_b.json', 'w') as f:
+                    decisions_json = json.dumps(decisions, indent=4) 
+                    f.write(decisions_json)
 
         self.step += 1
 
@@ -298,7 +299,8 @@ if __name__ == "__main__":
     parser.add_argument('--port', type=int, help='Port', default=3000)
     parser.add_argument('--log', type=bool, help='Log', default=False)
     parser.add_argument('--save', type=bool, help='Save trajectory', default=False)
-    parser.add_argument('--run_name', type=str, help='Run name', default='exp')
+    # parser.add_argument('--run_name', type=str, help='Run name', default='exp')
+    parser.add_argument('--run_name', type=str, help='Run name', default='2.4')
     parser.add_argument('--code', type=str, help='Multiple match code', default='x')
     parser.add_argument('--device', type=str, help='Inferene device', default='cpu')
     args = parser.parse_args()
