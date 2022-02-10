@@ -12,8 +12,8 @@ from tensorboardX import SummaryWriter
 
 LOOP_NUM = 300
 DOCKER_WAIT_TIME = 5
-# KEEP_OBS = 10
-KEEP_OBS = 5
+KEEP_OBS = 10
+# KEEP_OBS = 5
 
 EVALUATION_TERM = 10
 # EVALUATION_TERM = 1
@@ -23,9 +23,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--run_name', type=str, help='run name', default='exp')
     parser.add_argument('--k_epochs', type=int, help='k_epochs', default=10)
+    parser.add_argument('--num_matches', type=int, help='num_matches', default=4)
     args = parser.parse_args()
 
-    old_json_files = glob('./trajectory/*.json')
+    old_json_files = glob('./trajectory/*/*.json')
     for file in old_json_files:
         os.remove(file)
 
@@ -36,7 +37,7 @@ if __name__ == "__main__":
 
     for i in tqdm(range(0, LOOP_NUM)):
 
-        old_json_files = glob('./trajectory/*.json')
+        old_json_files = glob('./trajectory/*/*.json')
         for file in old_json_files:
             os.remove(file)
 
@@ -44,21 +45,35 @@ if __name__ == "__main__":
         p_docker = subprocess.Popen(['bash', '../server-run-2.sh'])
         sleep(DOCKER_WAIT_TIME)
 
-        p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=x'],
-                                stdout=DEVNULL, stderr=DEVNULL)
-        p_b = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', f'--ep={i}', '--code=x'])
+        codes = ['x', 'y', 'z', 'w', 'v', 'u', 'q', 'r', 's', 't'][:args.num_matches]
 
-        p_a_y = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=y', '--port=3001'], 
-                                 stdout=DEVNULL, stderr=DEVNULL)
-        p_b_y = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', f'--ep={i}', '--code=y', '--port=3001'])
+        for j in range(args.num_matches):
+            p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', f'--code={codes[j]}', f'--port={3000+j}'],
+                                    stdout=DEVNULL, stderr=DEVNULL)
+            if j == 0:
+                p_b = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', f'--code={codes[j]}', f'--port={3000+j}', '--log=True'])
+            else:
+                p_b = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', f'--code={codes[j]}', f'--port={3000+j}'])
 
-        p_a_z = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=z', '--port=3002'], 
-                                 stdout=DEVNULL, stderr=DEVNULL)
-        p_b_z = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', f'--ep={i}', '--code=z', '--port=3002'])
+        # p_a = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=x'],
+        #                         stdout=DEVNULL, stderr=DEVNULL)
+        # p_b = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', '--log=True', '--save=True', f'--ep={i}', '--code=x'])
 
-        p_a_w = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=w', '--port=3003'], 
-                                 stdout=DEVNULL, stderr=DEVNULL)
-        p_b_w = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', f'--ep={i}', '--code=w', '--port=3003'])       
+        # p_a_y = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=y', '--port=3001'], 
+        #                         stdout=DEVNULL, stderr=DEVNULL)
+        # p_b_y = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=y', '--port=3001'])
+
+        # p_a_z = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--save=True', '--code=z', '--port=3002'], 
+        #                         stdout=DEVNULL, stderr=DEVNULL)
+        # p_b_z = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=z', '--port=3002'])
+
+        # p_a_w = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=w', '--port=3003'], 
+        #                         stdout=DEVNULL, stderr=DEVNULL)
+        # p_b_w = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=w', '--port=3003'])
+        
+        # p_a_u = subprocess.Popen(['python', 'agent.py', '--id=a', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=v', '--port=3003'], 
+        #                         stdout=DEVNULL, stderr=DEVNULL)
+        # p_b_u = subprocess.Popen(['python', 'agent.py', '--id=b', f'--run_name={args.run_name}', f'--ep={i}', '--save=True', '--code=v', '--port=3003'])              
 
 
         # [p.wait() for p in (p_docker, p_a, p_b, p_a_y, p_b_y)]
@@ -66,7 +81,11 @@ if __name__ == "__main__":
         p_docker.wait()
         print("Episode Completed")
 
-        p_batch = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--codes=w x y z', f'--run_name={args.run_name}', '--log=True', f'--ep={i}'])
+        # sleep(DOCKER_WAIT_TIME)
+
+
+        p_batch = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', f"--codes={' '.join(codes)}", f'--run_name={args.run_name}', '--log=True', f'--ep={i}'])
+        # p_batch = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--codes=v w x y z', f'--run_name={args.run_name}', '--log=True', f'--ep={i}'])
         # p_batch_a = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=x'])
         # p_batch_b = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=y'])
         # p_batch_c = subprocess.Popen(['python', 'json2npy.py',  f'--dir=ep{i:03d}', '--code=z'])

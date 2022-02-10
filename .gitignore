@@ -12,3 +12,4 @@ python3/.vscode/
 python3/PPO_preTrained/
 python3/runs/
 .vscode/
+notebooks/.ipynb_checkpoints

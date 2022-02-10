@@ -208,7 +208,7 @@ if __name__ == "__main__":
 
     # for i, (status_file, next_status) in tqdm(enumerate(zip(status_list[:-1], status_list[1:]))):
 
-    # print(args.codes)
+    print(args.codes)
 
     for code in args.codes.split():
 
@@ -226,7 +226,7 @@ if __name__ == "__main__":
             'h': 0.0,
         })
 
-        # print(code, len(json_files))
+        print(code, len(json_files))
 
         for i in tqdm(reversed(range(len(status_list) - 1))):
 
@@ -304,6 +304,7 @@ if __name__ == "__main__":
                 power_r = (next_status[uid]['blast_diameter'] - live_units[uid]['blast_diameter'])
                 bomb_r = max(next_status[uid]['inventory']['bombs'] - live_units[uid]['inventory']['bombs'], 0) 
                 team_life_reward[live_units[uid]["agent_id"]] += 0.3 * life_r
+                # r_vector[id_list[uid]] += (0.9 * life_r + 0.05 * power_r + 0.05 * bomb_r)
                 r_vector[id_list[uid]] += (0.9 * life_r + 0.05 * power_r + 0.05 * bomb_r)
                 bomb_count += bomb_r
                 flame_count += power_r

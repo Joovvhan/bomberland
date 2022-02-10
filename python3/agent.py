@@ -10,7 +10,7 @@ import shutil
 
 from glob import glob
 from PPO import PPO
-# from tensorboardX import SummaryWriter
+from tensorboardX import SummaryWriter
 
 from json2npy import observe_entities, observe_units, observe_empty, TYPE2CODE
 
