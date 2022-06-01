@@ -318,7 +318,8 @@ if __name__ == "__main__":
             os.makedirs('./trajectory', exist_ok=True)
         if os.path.isdir(f'./trajectory/{args.code}') and SAVE:
             shutil.rmtree(f'./trajectory/{args.code}')
-            os.mkdir(f'./trajectory/{args.code}')
+        if not os.path.isdir(f'./trajectory/{args.code}'):
+            os.makedirs(f'./trajectory/{args.code}', exist_ok=True)
         uri = f"ws://127.0.0.1:{args.port}/?role=agent&agentId=agentA&name=defaultName"
     elif args.id == 'b':
         uri = f"ws://127.0.0.1:{args.port}/?role=agent&agentId=agentB&name=defaultName"
