@@ -21,6 +21,9 @@ TYPE2CODE = {
     'unit': 8,
     'hp': 9,
     'p': 10,
+    'px': 11, # Potential blast
+    'mb': 12, # My bomb
+    'ma': 13, # My ammunition
 }
 
 ACTION2CODE = {
@@ -98,15 +101,49 @@ def observe_entities(entities):
     # for entity in entities:
     #     board[entity['x']][entity['y']] = TYPE2CODE[entity['type']]
 
-    board = np.zeros((11, 15, 15))
+    # board = np.zeros((11, 15, 15))
+    board = np.zeros((len(TYPE2CODE), 15, 15))
     for entity in entities:
         board[TYPE2CODE[entity['type']], entity['x']][entity['y']] = 1
+        board[TYPE2CODE[entity['type']], entity['x'], entity['y']] = 1
         if 'hp' in entity:
-            board[TYPE2CODE['hp'], entity['x']][entity['y']] = entity['hp']
-        
+            # board[TYPE2CODE['hp'], entity['x']][entity['y']] = entity['hp']
+            board[
+                TYPE2CODE['hp'], entity['x'], entity['y']
+            ] = entity['hp']
         # else?
-    
+
+    for entity in entities:
+        if entity['type'] == 'b':
+            board[TYPE2CODE['px'], entity['x']][entity['y']] = 1
+
+            directions = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+            for direction in directions:
+                for i in range(1, entity["blast_diameter"] // 2 + 1):
+                    
+                    x = entity['x'] + i * direction[0]
+                    y = entity['y'] + i * direction[1]
+
+                    if x < 0 or y < 0 or x >= 15 or y >= 15: # Out of range
+                        break
+                    elif any(board[[TYPE2CODE['a'], TYPE2CODE['bp'], TYPE2CODE['m'], TYPE2CODE['o'], TYPE2CODE['w']], x, y]): # a[1], bp[4], m[5], o[6], w[7], blocked
+                        break
+                    else:
+                        board[TYPE2CODE['px'], x, y] = 1
+         
     return board
+
+# {
+#     "created": 43,
+#     "x": 6,
+#     "y": 4,
+#     "type": "b",
+#     "unit_id": "f",
+#     "agent_id": "b",
+#     "expires": 83,
+#     "hp": 1,
+#     "blast_diameter": 3
+# },
 
 # "c": {
 #     "coordinates": [
@@ -143,6 +180,21 @@ def observe_units(board, status):
             pass
     
     return board, live_units
+
+def observe_my_bomb(board, entities, unit_id):
+    
+    for entity in entities:
+        if entity['type'] == 'b' and entity['unit_id'] == unit_id:
+            board[TYPE2CODE['mb'], entity['x']][entity['y']] = 1
+            
+    return board
+    
+def observe_my_ammunition(board, status, unit_id):
+    
+    if unit_id in status:
+        board[TYPE2CODE['ma'], :, :] = status[unit_id]["inventory"]["bombs"];
+            
+    return board    
 
 def observe_empty(board):
     board[0, :, :] = (np.argmax(board, axis=0) == 0)
@@ -255,6 +307,7 @@ if __name__ == "__main__":
 
             # id_list, q_list, coord_list, team_list = list(), list(), list(), list()
             id_list, q_list, coord_list, team_list = dict(), list(), list(), list()
+            uid_list = list()
             logp_list = list()
                 
             with open(action_a_json, 'r') as f:
@@ -263,6 +316,7 @@ if __name__ == "__main__":
                     if uid in live_units:
                         # id_list.append(uid)
                         id_list[uid] = len(id_list)
+                        uid_list.append(uid)
                         q_list.append(ACTION2CODE[actions[uid]['action']])
                         logp_list.append(actions[uid]['log_prob'])
                         coord_list.append(np.array(status[uid]["coordinates"]))
@@ -274,6 +328,7 @@ if __name__ == "__main__":
                     if uid in live_units:
                         # id_list.append(uid)
                         id_list[uid] = len(id_list)
+                        uid_list.append(uid)
                         q_list.append(ACTION2CODE[actions[uid]['action']])
                         logp_list.append(actions[uid]['log_prob'])
                         coord_list.append(np.array(status[uid]["coordinates"]))
@@ -284,10 +339,14 @@ if __name__ == "__main__":
 
             observation = np.zeros((0, *board.shape))
 
-            for coord, team in zip(coord_list, team_list):
+            for uid, coord, team in zip(uid_list, coord_list, team_list):
                 u_board = np.copy(board)
                 u_board[TYPE2CODE['unit'], :, :] = team * u_board[TYPE2CODE['unit'], :, :]
                 u_board[TYPE2CODE['p'], coord[0], coord[1]] = 1
+
+                u_board = observe_my_bomb(u_board, entities, uid)
+                u_board = observe_my_ammunition(u_board, status, uid)
+
                 observation = np.concatenate((observation, np.expand_dims(u_board, axis=0)), axis=0)
 
             r_vector = np.zeros_like(q_vector, dtype=float)
