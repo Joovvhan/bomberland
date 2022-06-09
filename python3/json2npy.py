@@ -24,6 +24,7 @@ TYPE2CODE = {
     'px': 11, # Potential blast
     'mb': 12, # My bomb
     'ma': 13, # My ammunition
+    'mx': 14, # My flame
 }
 
 ACTION2CODE = {
@@ -104,7 +105,7 @@ def observe_entities(entities):
     # board = np.zeros((11, 15, 15))
     board = np.zeros((len(TYPE2CODE), 15, 15))
     for entity in entities:
-        board[TYPE2CODE[entity['type']], entity['x']][entity['y']] = 1
+        # board[TYPE2CODE[entity['type']], entity['x']][entity['y']] = 1
         board[TYPE2CODE[entity['type']], entity['x'], entity['y']] = 1
         if 'hp' in entity:
             # board[TYPE2CODE['hp'], entity['x']][entity['y']] = entity['hp']
@@ -189,6 +190,14 @@ def observe_my_bomb(board, entities, unit_id):
             
     return board
     
+def observe_my_flame(board, entities, unit_id):
+    
+    for entity in entities:
+        if entity['type'] == 'x' and 'unit_id' in entity and entity['unit_id'] == unit_id:
+            board[TYPE2CODE['mx'], entity['x']][entity['y']] = 1
+            
+    return board
+
 def observe_my_ammunition(board, status, unit_id):
     
     if unit_id in status:
@@ -346,6 +355,7 @@ if __name__ == "__main__":
 
                 u_board = observe_my_bomb(u_board, entities, uid)
                 u_board = observe_my_ammunition(u_board, status, uid)
+                u_board = observe_my_flame(u_board, entities, uid)
 
                 observation = np.concatenate((observation, np.expand_dims(u_board, axis=0)), axis=0)
 
@@ -358,7 +368,20 @@ if __name__ == "__main__":
 
             team_life_reward = {'a': 0, 'b': 0}
 
-            for uid in live_units:
+            # for uid in live_units:
+            for uid, coord, team in zip(uid_list, coord_list, team_list):
+
+                u_board = np.copy(board)
+                u_board[TYPE2CODE['unit'], :, :] = team * u_board[TYPE2CODE['unit'], :, :]
+                u_board[TYPE2CODE['p'], coord[0], coord[1]] = 1
+                u_board = observe_my_flame(u_board, entities, uid)
+
+                on_fire_r = -1 * np.sum(u_board[TYPE2CODE['p'], :, :] * u_board[TYPE2CODE['x'], :, :])
+                unit_on_my_fire_r = -1 * np.sum(u_board[TYPE2CODE['mx'], :, :] * u_board[TYPE2CODE['unit'], :, :])
+
+                # if on_fire_r or unit_on_my_fire_r:
+                #     print(i, on_fire_r, unit_on_my_fire_r)
+
                 life_r = (next_status[uid]['hp'] - live_units[uid]['hp']) 
                 power_r = (next_status[uid]['blast_diameter'] - live_units[uid]['blast_diameter'])
                 bomb_r = max(next_status[uid]['inventory']['bombs'] - live_units[uid]['inventory']['bombs'], 0) 

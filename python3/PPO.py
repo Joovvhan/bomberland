@@ -17,7 +17,7 @@ from tensorboardX import SummaryWriter
 
 ACTION_SPACE_SIZE = 6
 # OBS_DIM = 11
-OBS_DIM = 14
+OBS_DIM = 15
 MAP_SIZE = 15
 
 # BATCH_SIZE = 2048
